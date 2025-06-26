@@ -26,7 +26,8 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
   SidebarProvider,
-  SidebarFooter
+  SidebarFooter,
+  SidebarMenuSkeleton 
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button";
 import { auth, db } from "@/lib/firebase";
@@ -45,7 +46,7 @@ export default function SharedLayout({
   const [user] = useAuthState(auth);
 
   const notesCollection = user ? collection(db, 'notes') : null;
-  const q = notesCollection ? query(notesCollection, where('ownerId', '==', user.uid), orderBy('updatedAt', 'desc')) : null;
+  const q = notesCollection ? query(notesCollection, where('ownerId', '==', user?.uid), orderBy('updatedAt', 'desc')) : null;
   const [notesSnapshot, loadingNotes] = useCollection(q);
 
   const notes = notesSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Note)) || [];
