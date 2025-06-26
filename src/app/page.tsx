@@ -1,6 +1,7 @@
 "use client"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useState } from "react"
 import {
   FileText,
   Home,
@@ -9,6 +10,7 @@ import {
   Settings,
   Users,
   Bell,
+  Lock,
 } from "lucide-react"
 
 import {
@@ -27,20 +29,86 @@ import {
 import { UserNav } from "@/components/user-nav"
 import { NoteEditor } from "@/components/note-editor"
 import { ShareDialog } from "@/components/share-dialog"
+import { ManagePrivacyDialog } from "@/components/manage-privacy-dialog"
+import { UnlockPrompt } from "@/components/unlock-prompt"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useToast } from "@/hooks/use-toast"
 
-const notes = [
-  { id: 1, title: "Project Phoenix Kick-off", icon: <FileText /> },
-  { id: 2, title: "Q3 Marketing Strategy", icon: <FileText /> },
-  { id: 3, title: "Engineering All-Hands", icon: <FileText /> },
-  { id: 4, title: "Design System Updates", icon: <FileText /> },
+export type Note = {
+  id: number;
+  title: string;
+  content: string;
+  tags: string[];
+  isPrivate: boolean;
+  password?: string;
+};
+
+const initialNotes: Note[] = [
+  { id: 1, title: "Project Phoenix Kick-off", content: `Team,
+
+This document outlines the agenda and goals for our Project Phoenix kick-off meeting. Please review it beforehand.
+
+### Agenda
+
+1.  **Introductions (5 mins)** - Brief intros from all team members.
+2.  **Project Overview (15 mins)** - High-level goals, scope, and expected outcomes.
+3.  **Roles & Responsibilities (10 mins)** - Clarifying who owns what.
+4.  **Timeline & Milestones (15 mins)** - Key dates and deliverables for Q3.
+5.  **Q&A (10 mins)** - Open floor for questions.
+
+### Pre-reading
+-   [Project Brief](https://example.com)
+-   [Market Analysis](https://example.com)
+
+Looking forward to a productive session!`, tags: ["ProjectX", "High-Priority"], isPrivate: false },
+  { id: 2, title: "Q3 Marketing Strategy", content: "Marketing strategy content here.", tags: ["Marketing"], isPrivate: false },
+  { id: 3, title: "Engineering All-Hands", content: "Engineering all-hands content here.", tags: ["Engineering"], isPrivate: false },
+  { id: 4, title: "Design System Updates", content: "Design system updates content here.", tags: ["Design"], isPrivate: true, password: "password123" },
 ]
 
 export default function DashboardPage() {
   const pathname = usePathname()
+  const { toast } = useToast()
+  const [notes, setNotes] = useState<Note[]>(initialNotes)
+  const [selectedNoteId, setSelectedNoteId] = useState<number>(1)
+  const [unlockedNoteIds, setUnlockedNoteIds] = useState<number[]>([])
   
+  const selectedNote = notes.find((note) => note.id === selectedNoteId)!;
+  const isNoteUnlocked = !selectedNote.isPrivate || unlockedNoteIds.includes(selectedNote.id);
+
+  const handleNoteSelect = (id: number) => {
+    setSelectedNoteId(id);
+  }
+
+  const handleSetPassword = (noteId: number, password: string) => {
+    setNotes(notes.map(note => note.id === noteId ? { ...note, isPrivate: true, password: password } : note));
+    if (!unlockedNoteIds.includes(noteId)) {
+        setUnlockedNoteIds([...unlockedNoteIds, noteId]);
+    }
+    toast({ title: "Note is now private", description: "The note has been secured with a password." });
+  }
+  
+  const handleRemovePassword = (noteId: number) => {
+    setNotes(notes.map(note => note.id === noteId ? { ...note, isPrivate: false, password: undefined } : note));
+    toast({ title: "Privacy removed", description: "The note is no longer password protected." });
+  }
+
+  const handleUnlockNote = (noteId: number, passwordAttempt: string) => {
+    const note = notes.find(n => n.id === noteId);
+    if (note && note.password === passwordAttempt) {
+      setUnlockedNoteIds([...unlockedNoteIds, noteId]);
+      toast({ title: "Note unlocked" });
+    } else {
+      toast({ title: "Incorrect password", variant: "destructive" });
+    }
+  }
+
+  const handleUpdateNote = (updatedNote: Note) => {
+    setNotes(notes.map(note => note.id === updatedNote.id ? updatedNote : note));
+  }
+
   return (
     <SidebarProvider>
       <Sidebar>
@@ -78,8 +146,8 @@ export default function DashboardPage() {
           <SidebarMenu>
             {notes.map((note) => (
               <SidebarMenuItem key={note.id}>
-                <SidebarMenuButton href="#">
-                  {note.icon}
+                <SidebarMenuButton onClick={() => handleNoteSelect(note.id)} isActive={note.id === selectedNoteId}>
+                  {note.isPrivate ? <Lock className="h-4 w-4" /> : <FileText />}
                   {note.title}
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -100,9 +168,14 @@ export default function DashboardPage() {
       <SidebarInset>
         <header className="flex items-center justify-between p-4 border-b">
           <div>
-            <p className="text-sm text-muted-foreground">Notes / Project Phoenix</p>
+            <p className="text-sm text-muted-foreground">Notes / {selectedNote.title}</p>
           </div>
           <div className="flex items-center gap-4">
+            <ManagePrivacyDialog 
+              note={selectedNote}
+              onSetPassword={handleSetPassword}
+              onRemovePassword={handleRemovePassword}
+            />
             <ShareDialog />
             <Popover>
               <PopoverTrigger asChild>
@@ -183,7 +256,11 @@ export default function DashboardPage() {
           </div>
         </header>
         <main className="p-4 md:p-8">
-          <NoteEditor />
+          {isNoteUnlocked ? (
+            <NoteEditor note={selectedNote} onUpdate={handleUpdateNote} />
+          ) : (
+            <UnlockPrompt note={selectedNote} onUnlock={handleUnlockNote} />
+          )}
         </main>
       </SidebarInset>
     </SidebarProvider>
