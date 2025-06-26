@@ -13,12 +13,16 @@ export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
+    // Wait until the auth state is loaded
     if (loading) return;
+
+    // If there is no user, redirect to login page
     if (!user) {
       router.replace('/login');
       return;
     }
 
+    // If there is a user, fetch their most recent note or create a new one
     const fetchFirstNoteOrCreate = async () => {
       const notesCollection = collection(db, 'notes');
       const q = query(
@@ -46,6 +50,7 @@ export default function HomePage() {
         });
         router.replace(`/note/${newNote.id}`);
       } else {
+        // Redirect to the most recently updated note
         router.replace(`/note/${snapshot.docs[0].id}`);
       }
     };
@@ -53,6 +58,7 @@ export default function HomePage() {
     fetchFirstNoteOrCreate();
   }, [user, loading, router]);
 
+  // Show a loading indicator while we determine the user's auth state and redirect
   return (
     <div className="flex h-screen w-full flex-col items-center justify-center gap-4 bg-background">
       <BrainCircuit className="h-12 w-12 animate-pulse text-primary" />
