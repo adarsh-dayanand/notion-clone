@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, type KeyboardEvent } from "react"
 import { X, Tag, Eye, Edit } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import remarkBreaks from "remark-breaks"
 
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -138,7 +139,7 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
         ) : (
           <div onClick={() => setIsEditing(true)} className="cursor-text">
               <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
+                  remarkPlugins={[remarkGfm, remarkBreaks]}
                   className="min-h-[400px]"
                   components={{
                       img: ({node, ...props}) => <img {...props} className="rounded-lg" alt={props.alt || ""} />,
