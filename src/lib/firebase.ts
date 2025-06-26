@@ -10,7 +10,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyD5YSMTWAVVgOANa9bUsRfVHrQEm4Qsdp4",
   authDomain: "ad-notion-clone.firebaseapp.com",
   projectId: "ad-notion-clone",
-  storageBucket: "ad-notion-clone.firebasestorage.app",
+  storageBucket: "ad-notion-clone.appspot.com",
   messagingSenderId: "719366042363",
   appId: "1:719366042363:web:1aa885115528572b25f65e",
   measurementId: "G-9E0P8SRGT6"
