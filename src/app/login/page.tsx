@@ -1,7 +1,6 @@
 
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BrainCircuit } from "lucide-react";
 import {
@@ -53,15 +52,7 @@ export default function LoginPage() {
             </Button>
           </div>
         </div>
-        <p className="mt-8 text-sm text-muted-foreground">
-          <Link
-            href="/"
-            className="underline underline-offset-4 hover:text-primary"
-          >
-            Continue without an account
-          </Link>
-        </p>
-        <p className="mt-4 text-xs text-muted-foreground">
+        <p className="mt-8 text-xs text-muted-foreground">
           By continuing, you agree to our Terms of Service and Privacy Policy.
         </p>
       </div>
