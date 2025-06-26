@@ -1,10 +1,48 @@
+
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Notebook } from "lucide-react";
+import {
+  signInWithPopup,
+  GoogleAuthProvider,
+  OAuthProvider,
+} from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
 import { AppleIcon, GoogleIcon } from "@/components/icons";
+import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleSignIn = async (provider: GoogleAuthProvider | OAuthProvider) => {
+    try {
+      await signInWithPopup(auth, provider);
+      router.push("/");
+    } catch (error: any) {
+      console.error("Authentication error:", error);
+      toast({
+        title: "Authentication failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSignInWithGoogle = () => {
+    const provider = new GoogleAuthProvider();
+    handleSignIn(provider);
+  };
+
+  const handleSignInWithApple = () => {
+    const provider = new OAuthProvider("apple.com");
+    handleSignIn(provider);
+  };
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm text-center">
@@ -19,11 +57,11 @@ export default function LoginPage() {
             Sign in to organize your world.
           </p>
           <div className="space-y-2">
-            <Button className="w-full" size="lg">
+            <Button className="w-full" size="lg" onClick={handleSignInWithGoogle}>
               <GoogleIcon className="mr-2 h-5 w-5" />
               Sign in with Google
             </Button>
-            <Button className="w-full" size="lg" variant="secondary">
+            <Button className="w-full" size="lg" variant="secondary" onClick={handleSignInWithApple}>
               <AppleIcon className="mr-2 h-5 w-5" />
               Sign in with Apple
             </Button>
