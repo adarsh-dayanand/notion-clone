@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, type KeyboardEvent } from "react"
+import dynamic from "next/dynamic"
 import { X, Tag } from "lucide-react"
 import type { OutputData } from "@editorjs/editorjs"
 
@@ -8,7 +9,17 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import type { Note } from "@/lib/types"
-import Editor from "./editor"
+import { Skeleton } from "@/components/ui/skeleton"
+
+const Editor = dynamic(() => import("./editor"), {
+  ssr: false,
+  loading: () => (
+    <div className="space-y-4">
+      <Skeleton className="h-10 w-full" />
+      <Skeleton className="h-40 w-full" />
+    </div>
+  ),
+});
 
 interface NoteEditorProps {
     note: Note;
