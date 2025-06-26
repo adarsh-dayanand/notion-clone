@@ -18,20 +18,14 @@ interface NoteEditorProps {
 }
 
 export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
-  const [title, setTitle] = useState(note.title);
-  const [content, setContent] = useState(note.content);
-  const [tags, setTags] = useState(note.tags)
   const [tagInput, setTagInput] = useState("")
   const [isEditing, setIsEditing] = useState(false);
   const { toast } = useToast()
   
   useEffect(() => {
-    setTitle(note.title);
-    setContent(note.content);
-    setTags(note.tags);
     // When note changes, default to preview mode
     setIsEditing(false);
-  }, [note]);
+  }, [note.id]);
 
   // Automatically switch to edit mode when the user starts typing in preview
   useEffect(() => {
@@ -47,13 +41,11 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
   }, [isEditing])
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTitle(e.target.value);
     onUpdate({ ...note, title: e.target.value });
   };
   
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newContent = e.target.value;
-    setContent(newContent);
     onUpdate({ ...note, content: newContent });
     if (textareaRef.current) {
         textareaRef.current.style.height = "auto"
@@ -68,9 +60,8 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
   const handleTagInputKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && tagInput.trim() !== "") {
       e.preventDefault()
-      if (!tags.includes(tagInput.trim())) {
-        const newTags = [...tags, tagInput.trim()];
-        setTags(newTags)
+      if (!note.tags.includes(tagInput.trim())) {
+        const newTags = [...note.tags, tagInput.trim()];
         onUpdate({ ...note, tags: newTags });
         setTagInput("")
         toast({
@@ -79,16 +70,14 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
         })
       }
     }
-    if (e.key === "Backspace" && tagInput === "" && tags.length > 0) {
-      const newTags = tags.slice(0, -1)
-      setTags(newTags);
+    if (e.key === "Backspace" && tagInput === "" && note.tags.length > 0) {
+      const newTags = note.tags.slice(0, -1)
       onUpdate({ ...note, tags: newTags });
     }
   }
 
   const removeTag = (tagToRemove: string) => {
-    const newTags = tags.filter((tag) => tag !== tagToRemove);
-    setTags(newTags)
+    const newTags = note.tags.filter((tag) => tag !== tagToRemove);
     onUpdate({ ...note, tags: newTags });
   }
 
@@ -100,13 +89,13 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
       textareaRef.current.focus();
     }
-  }, [content, isEditing])
+  }, [note.content, isEditing])
 
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex justify-between items-start mb-4">
         <Input
-          value={title}
+          value={note.title}
           onChange={handleTitleChange}
           className="text-3xl md:text-4xl font-bold font-headline h-auto border-none focus-visible:ring-0 shadow-none p-0"
         />
@@ -119,7 +108,7 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
       <div className="flex items-center gap-2 mt-4 mb-6">
         <Tag className="h-5 w-5 text-muted-foreground" />
         <div className="flex flex-wrap items-center gap-2">
-          {tags.map((tag) => (
+          {note.tags.map((tag) => (
             <Badge key={tag} variant="secondary" className="text-sm">
               {tag}
               <button onClick={() => removeTag(tag)} className="ml-1.5 rounded-full hover:bg-muted-foreground/20 p-0.5">
@@ -141,7 +130,7 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
         {isEditing ? (
           <Textarea
               ref={textareaRef}
-              value={content}
+              value={note.content}
               onChange={handleContentChange}
               placeholder="Start writing your note here... You can use Markdown for formatting."
               className="w-full text-base border-none focus-visible:ring-0 shadow-none p-0 resize-none overflow-hidden min-h-[400px]"
@@ -155,7 +144,7 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
                       img: ({node, ...props}) => <img {...props} className="rounded-lg" alt={props.alt || ""} />,
                   }}
               >
-                  {content}
+                  {note.content}
               </ReactMarkdown>
           </div>
         )}
