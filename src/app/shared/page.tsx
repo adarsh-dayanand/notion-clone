@@ -1,5 +1,5 @@
 "use client"
-import Link from "next/link"
+
 import { usePathname } from "next/navigation"
 import {
   FileText,
@@ -21,15 +21,15 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
   SidebarProvider,
-  SidebarFooter
+  SidebarFooter,
 } from "@/components/ui/sidebar"
 
 import { UserNav } from "@/components/user-nav"
-import { NoteEditor } from "@/components/note-editor"
 import { ShareDialog } from "@/components/share-dialog"
 import { Button } from "@/components/ui/button"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 
 const notes = [
   { id: 1, title: "Project Phoenix Kick-off", icon: <FileText /> },
@@ -38,9 +38,42 @@ const notes = [
   { id: 4, title: "Design System Updates", icon: <FileText /> },
 ]
 
-export default function DashboardPage() {
+const sharedNotes = [
+    {
+        id: 1,
+        title: "Q4 Product Roadmap",
+        sharedBy: "Olivia Martin",
+        avatar: "https://placehold.co/100x100.png",
+        avatarHint: "female avatar",
+        fallback: "OM",
+        date: "October 25, 2023",
+        permission: "Can view",
+    },
+    {
+        id: 2,
+        title: "Marketing Campaign Ideas",
+        sharedBy: "Jackson Lee",
+        avatar: "https://placehold.co/100x100.png",
+        avatarHint: "male avatar",
+        fallback: "JL",
+        date: "October 22, 2023",
+        permission: "Can edit",
+    },
+    {
+        id: 3,
+        title: "User Research Synthesis",
+        sharedBy: "Isabella Nguyen",
+        avatar: "https://placehold.co/100x100.png",
+        avatarHint: "female avatar",
+        fallback: "IN",
+        date: "October 18, 2023",
+        permission: "Can comment",
+    },
+]
+
+export default function SharedPage() {
   const pathname = usePathname()
-  
+
   return (
     <SidebarProvider>
       <Sidebar>
@@ -87,7 +120,7 @@ export default function DashboardPage() {
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="p-2">
-           <SidebarMenu>
+          <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton href="#">
                 <PlusCircle />
@@ -100,7 +133,7 @@ export default function DashboardPage() {
       <SidebarInset>
         <header className="flex items-center justify-between p-4 border-b">
           <div>
-            <p className="text-sm text-muted-foreground">Notes / Project Phoenix</p>
+            <h2 className="text-2xl font-bold font-headline">Shared with Me</h2>
           </div>
           <div className="flex items-center gap-4">
             <ShareDialog />
@@ -183,7 +216,28 @@ export default function DashboardPage() {
           </div>
         </header>
         <main className="p-4 md:p-8">
-          <NoteEditor />
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {sharedNotes.map((note) => (
+              <Card key={note.id}>
+                <CardHeader>
+                  <CardTitle>{note.title}</CardTitle>
+                  <CardDescription>Shared on {note.date}</CardDescription>
+                </CardHeader>
+                <CardFooter className="flex justify-between">
+                    <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                            <AvatarImage src={note.avatar} alt={note.sharedBy} data-ai-hint={note.avatarHint} />
+                            <AvatarFallback>{note.fallback}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm text-muted-foreground">
+                            {note.sharedBy}
+                        </span>
+                    </div>
+                    <div className="text-sm text-muted-foreground">{note.permission}</div>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
         </main>
       </SidebarInset>
     </SidebarProvider>
