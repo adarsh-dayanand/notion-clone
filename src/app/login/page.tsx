@@ -7,19 +7,19 @@ import { BrainCircuit } from "lucide-react";
 import {
   signInWithPopup,
   GoogleAuthProvider,
-  OAuthProvider,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
-import { AppleIcon, GoogleIcon } from "@/components/icons";
+import { GoogleIcon } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleSignIn = async (provider: GoogleAuthProvider | OAuthProvider) => {
+  const handleSignInWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
       router.push("/");
@@ -31,16 +31,6 @@ export default function LoginPage() {
         variant: "destructive",
       });
     }
-  };
-
-  const handleSignInWithGoogle = () => {
-    const provider = new GoogleAuthProvider();
-    handleSignIn(provider);
-  };
-
-  const handleSignInWithApple = () => {
-    const provider = new OAuthProvider("apple.com");
-    handleSignIn(provider);
   };
 
   return (
@@ -60,10 +50,6 @@ export default function LoginPage() {
             <Button className="w-full" size="lg" onClick={handleSignInWithGoogle}>
               <GoogleIcon className="mr-2 h-5 w-5" />
               Sign in with Google
-            </Button>
-            <Button className="w-full" size="lg" variant="secondary" onClick={handleSignInWithApple}>
-              <AppleIcon className="mr-2 h-5 w-5" />
-              Sign in with Apple
             </Button>
           </div>
         </div>
