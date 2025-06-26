@@ -1,13 +1,16 @@
 "use client"
 
 import { useState, useRef, useEffect, type KeyboardEvent } from "react"
-import { X, Tag } from "lucide-react"
+import { X, Tag, Eye, Edit } from "lucide-react"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import type { Note } from "@/app/page"
+import { Button } from "@/components/ui/button"
 
 interface NoteEditorProps {
     note: Note;
@@ -19,13 +22,29 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
   const [content, setContent] = useState(note.content);
   const [tags, setTags] = useState(note.tags)
   const [tagInput, setTagInput] = useState("")
+  const [isEditing, setIsEditing] = useState(false);
   const { toast } = useToast()
   
   useEffect(() => {
     setTitle(note.title);
     setContent(note.content);
     setTags(note.tags);
+    // When note changes, default to preview mode
+    setIsEditing(false);
   }, [note]);
+
+  // Automatically switch to edit mode when the user starts typing in preview
+  useEffect(() => {
+    const handleKeyDown = (e: globalThis.KeyboardEvent) => {
+        if (!isEditing && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            setIsEditing(true);
+        }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isEditing])
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(e.target.value);
@@ -76,19 +95,26 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    if (textareaRef.current) {
+    if (isEditing && textareaRef.current) {
       textareaRef.current.style.height = "auto"
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
+      textareaRef.current.focus();
     }
-  }, [content])
+  }, [content, isEditing])
 
   return (
     <div className="max-w-4xl mx-auto">
-      <Input
-        value={title}
-        onChange={handleTitleChange}
-        className="text-3xl md:text-4xl font-bold font-headline h-auto border-none focus-visible:ring-0 shadow-none p-0"
-      />
+      <div className="flex justify-between items-start mb-4">
+        <Input
+          value={title}
+          onChange={handleTitleChange}
+          className="text-3xl md:text-4xl font-bold font-headline h-auto border-none focus-visible:ring-0 shadow-none p-0"
+        />
+        <Button variant="ghost" size="sm" onClick={() => setIsEditing(!isEditing)} className="ml-4 flex-shrink-0">
+            {isEditing ? <Eye className="mr-2 h-4 w-4" /> : <Edit className="mr-2 h-4 w-4" />}
+            {isEditing ? "Preview" : "Edit"}
+        </Button>
+      </div>
 
       <div className="flex items-center gap-2 mt-4 mb-6">
         <Tag className="h-5 w-5 text-muted-foreground" />
@@ -112,13 +138,27 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
       </div>
 
       <div className="prose prose-stone dark:prose-invert max-w-none">
-        <Textarea
-            ref={textareaRef}
-            value={content}
-            onChange={handleContentChange}
-            placeholder="Start writing your note here..."
-            className="w-full text-base border-none focus-visible:ring-0 shadow-none p-0 resize-none overflow-hidden min-h-[400px]"
-        />
+        {isEditing ? (
+          <Textarea
+              ref={textareaRef}
+              value={content}
+              onChange={handleContentChange}
+              placeholder="Start writing your note here... You can use Markdown for formatting."
+              className="w-full text-base border-none focus-visible:ring-0 shadow-none p-0 resize-none overflow-hidden min-h-[400px]"
+          />
+        ) : (
+          <div onClick={() => setIsEditing(true)} className="cursor-text">
+              <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  className="min-h-[400px]"
+                  components={{
+                      img: ({node, ...props}) => <img {...props} className="rounded-lg" alt={props.alt || ""} />,
+                  }}
+              >
+                  {content}
+              </ReactMarkdown>
+          </div>
+        )}
       </div>
     </div>
   )
