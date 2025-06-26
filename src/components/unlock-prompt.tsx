@@ -7,19 +7,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import type { Note } from "@/app/page";
-
 
 interface UnlockPromptProps {
-  note: Note;
-  onUnlock: (noteId: number, passwordAttempt: string) => void;
+  onUnlock: (passwordAttempt: string) => void;
 }
 
-export function UnlockPrompt({ note, onUnlock }: UnlockPromptProps) {
+export function UnlockPrompt({ onUnlock }: UnlockPromptProps) {
   const [passwordAttempt, setPasswordAttempt] = useState("");
 
   const handleUnlockClick = () => {
-    onUnlock(note.id, passwordAttempt);
+    onUnlock(passwordAttempt);
   };
 
   return (

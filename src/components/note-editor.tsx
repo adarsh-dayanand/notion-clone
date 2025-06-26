@@ -7,12 +7,12 @@ import type { OutputData } from "@editorjs/editorjs"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
-import type { Note } from "@/app/page"
+import type { Note } from "@/lib/types"
 import Editor from "./editor"
 
 interface NoteEditorProps {
     note: Note;
-    onUpdate: (note: Note) => void;
+    onUpdate: (updatedFields: Partial<Note>) => void;
 }
 
 export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
@@ -20,11 +20,11 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
   const { toast } = useToast()
   
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onUpdate({ ...note, title: e.target.value });
+    onUpdate({ title: e.target.value });
   };
   
   const handleContentChange = (newData: OutputData) => {
-    onUpdate({ ...note, content: JSON.stringify(newData) });
+    onUpdate({ content: JSON.stringify(newData) });
   };
 
   const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,7 +36,7 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
       e.preventDefault()
       if (!note.tags.includes(tagInput.trim())) {
         const newTags = [...note.tags, tagInput.trim()];
-        onUpdate({ ...note, tags: newTags });
+        onUpdate({ tags: newTags });
         setTagInput("")
         toast({
           title: "Tag added",
@@ -46,13 +46,13 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
     }
     if (e.key === "Backspace" && tagInput === "" && note.tags.length > 0) {
       const newTags = note.tags.slice(0, -1)
-      onUpdate({ ...note, tags: newTags });
+      onUpdate({ tags: newTags });
     }
   }
 
   const removeTag = (tagToRemove: string) => {
     const newTags = note.tags.filter((tag) => tag !== tagToRemove);
-    onUpdate({ ...note, tags: newTags });
+    onUpdate({ tags: newTags });
   }
 
   let parsedContent: OutputData | undefined = undefined;
@@ -91,6 +91,7 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
         <Input
           value={note.title}
           onChange={handleTitleChange}
+          onBlur={() => onUpdate({ title: note.title })}
           placeholder="Note title..."
           className="text-3xl md:text-4xl font-bold font-headline h-auto border-none focus-visible:ring-0 shadow-none p-0"
         />

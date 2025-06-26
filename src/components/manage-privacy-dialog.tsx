@@ -17,15 +17,16 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
-import type { Note } from "@/app/page"
+import type { Note } from "@/lib/types"
 
 interface ManagePrivacyDialogProps {
   note: Note;
-  onSetPassword: (noteId: number, password: string) => void;
-  onRemovePassword: (noteId: number) => void;
+  isUnlocked: boolean;
+  onSetPassword: (password: string) => void;
+  onRemovePassword: () => void;
 }
 
-export function ManagePrivacyDialog({ note, onSetPassword, onRemovePassword }: ManagePrivacyDialogProps) {
+export function ManagePrivacyDialog({ note, isUnlocked, onSetPassword, onRemovePassword }: ManagePrivacyDialogProps) {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isOpen, setIsOpen] = useState(false)
@@ -40,14 +41,19 @@ export function ManagePrivacyDialog({ note, onSetPassword, onRemovePassword }: M
       toast({ title: "Passwords do not match", variant: "destructive" });
       return;
     }
-    onSetPassword(note.id, password);
+    onSetPassword(password);
     setPassword("");
     setConfirmPassword("");
     setIsOpen(false);
   }
 
   const handleRemovePasswordClick = () => {
-    onRemovePassword(note.id);
+    if (!isUnlocked) {
+      toast({ title: "Unlock note first", description: "You must unlock the note before removing the password.", variant: "destructive" });
+      setIsOpen(false);
+      return;
+    }
+    onRemovePassword();
     setIsOpen(false);
   }
 
