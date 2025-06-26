@@ -96,14 +96,12 @@ export default function DashboardPage() {
 
   const handleSetPassword = (noteId: number, password: string) => {
     setNotes(notes.map(note => note.id === noteId ? { ...note, isPrivate: true, password: password } : note));
-    if (!unlockedNoteIds.includes(noteId)) {
-        setUnlockedNoteIds([...unlockedNoteIds, noteId]);
-    }
     toast({ title: "Note is now private", description: "The note has been secured with a password." });
   }
   
   const handleRemovePassword = (noteId: number) => {
     setNotes(notes.map(note => note.id === noteId ? { ...note, isPrivate: false, password: undefined } : note));
+    setUnlockedNoteIds(unlockedNoteIds.filter(id => id !== noteId));
     toast({ title: "Privacy removed", description: "The note is no longer password protected." });
   }
 
