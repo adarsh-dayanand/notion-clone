@@ -1,6 +1,8 @@
+
 "use client"
 
 import { useParams, usePathname, useRouter } from "next/navigation"
+import Link from "next/link"
 import {
   FileText,
   Home,
@@ -80,21 +82,27 @@ export default function NoteLayout({
         <SidebarContent className="p-2">
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton href={notes.length > 0 ? `/note/${notes[0].id}` : "/"} isActive={pathname.startsWith("/note")}>
-                <Home />
-                Home
+              <SidebarMenuButton asChild isActive={pathname.startsWith("/note") && !pathname.startsWith("/note/")}>
+                <Link href={notes.length > 0 ? `/note/${notes[0].id}` : "/"}>
+                  <Home />
+                  Home
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton href="/shared" isActive={pathname.startsWith("/shared")}>
-                <Users />
-                Shared with me
+              <SidebarMenuButton asChild isActive={pathname.startsWith("/shared")}>
+                <Link href="/shared">
+                  <Users />
+                  Shared with me
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton href="/settings" isActive={pathname.startsWith("/settings")}>
-                <Settings />
-                Settings
+              <SidebarMenuButton asChild isActive={pathname.startsWith("/settings")}>
+                <Link href="/settings">
+                  <Settings />
+                  Settings
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -110,9 +118,11 @@ export default function NoteLayout({
             ) : (
               notes.map((note) => (
                 <SidebarMenuItem key={note.id}>
-                  <SidebarMenuButton href={`/note/${note.id}`} isActive={params.noteId === note.id}>
-                    {note.isPrivate ? <Lock className="h-4 w-4" /> : <FileText />}
-                    <span className="truncate">{note.title}</span>
+                  <SidebarMenuButton asChild isActive={params.noteId === note.id}>
+                    <Link href={`/note/${note.id}`}>
+                      {note.isPrivate ? <Lock className="h-4 w-4" /> : <FileText />}
+                      <span className="truncate">{note.title}</span>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))
