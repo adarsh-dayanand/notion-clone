@@ -7,21 +7,10 @@ import { BrainCircuit, Loader2 } from "lucide-react";
 import {
   signInWithPopup,
   GoogleAuthProvider,
-  type User,
 } from "firebase/auth";
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  limit,
-  getDocs,
-  addDoc,
-  serverTimestamp,
-} from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 
-import { auth, db } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { GoogleIcon } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
@@ -32,41 +21,10 @@ export default function LoginPage() {
   const [user, loading] = useAuthState(auth);
   const [isSigningIn, setIsSigningIn] = useState(false);
 
-  // This function redirects the user to their most recent note, or creates one if none exist.
-  const redirectToNote = async (firebaseUser: User) => {
-    const notesCollection = collection(db, 'notes');
-    const q = query(
-      notesCollection,
-      where('ownerId', '==', firebaseUser.uid),
-      orderBy('updatedAt', 'desc'),
-      limit(1)
-    );
-
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) {
-      const newNote = await addDoc(notesCollection, {
-        title: "Untitled Note",
-        content: JSON.stringify({
-          time: Date.now(),
-          blocks: [{ id: "1", type: "paragraph", data: { text: "Start writing your new note here!" } }],
-          version: "2.29.1"
-        }),
-        tags: [],
-        isPrivate: false,
-        ownerId: firebaseUser.uid,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-      router.replace(`/note/${newNote.id}`);
-    } else {
-      router.replace(`/note/${snapshot.docs[0].id}`);
-    }
-  };
-
-  // When the auth state is resolved, redirect the user if they are logged in.
+  // When the auth state is resolved, redirect the user to the main page if they are logged in.
   useEffect(() => {
     if (!loading && user) {
-      redirectToNote(user);
+      router.replace('/');
     }
   }, [user, loading, router]);
 
@@ -75,7 +33,8 @@ export default function LoginPage() {
     setIsSigningIn(true);
     try {
       // signInWithPopup will trigger the onAuthStateChanged listener,
-      // which is handled by the useAuthState hook and the useEffect above.
+      // which is handled by the useAuthState hook. The useEffect above will
+      // then redirect the user to the main page.
       await signInWithPopup(auth, provider);
     } catch (error: any) {
       console.error("Authentication error:", error);
@@ -95,7 +54,7 @@ export default function LoginPage() {
     return (
       <div className="flex h-screen w-full flex-col items-center justify-center gap-4 bg-background">
         <BrainCircuit className="h-12 w-12 animate-pulse text-primary" />
-        <p className="text-muted-foreground">Loading your notes...</p>
+        <p className="text-muted-foreground">Redirecting...</p>
       </div>
     );
   }
