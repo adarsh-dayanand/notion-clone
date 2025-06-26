@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useParams, usePathname, useRouter } from "next/navigation"
@@ -32,7 +33,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Note } from '@/lib/types';
 
 
-export default function NoteLayout({
+export default function SettingsLayout({
   children,
 }: {
   children: React.ReactNode
@@ -136,3 +137,4 @@ export default function NoteLayout({
     </SidebarProvider>
   )
 }
+
