@@ -1,17 +1,14 @@
 "use client"
 
-import { useState, useRef, useEffect, type KeyboardEvent } from "react"
-import { X, Tag, Eye, Edit } from "lucide-react"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
-import remarkBreaks from "remark-breaks"
+import { useState, type KeyboardEvent } from "react"
+import { X, Tag } from "lucide-react"
+import type { OutputData } from "@editorjs/editorjs"
 
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import type { Note } from "@/app/page"
-import { Button } from "@/components/ui/button"
+import Editor from "./editor"
 
 interface NoteEditorProps {
     note: Note;
@@ -20,38 +17,14 @@ interface NoteEditorProps {
 
 export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
   const [tagInput, setTagInput] = useState("")
-  const [isEditing, setIsEditing] = useState(false);
   const { toast } = useToast()
   
-  useEffect(() => {
-    // When note changes, default to preview mode
-    setIsEditing(false);
-  }, [note.id]);
-
-  // Automatically switch to edit mode when the user starts typing in preview
-  useEffect(() => {
-    const handleKeyDown = (e: globalThis.KeyboardEvent) => {
-        if (!isEditing && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-            setIsEditing(true);
-        }
-    }
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-        window.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [isEditing])
-
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onUpdate({ ...note, title: e.target.value });
   };
   
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newContent = e.target.value;
-    onUpdate({ ...note, content: newContent });
-    if (textareaRef.current) {
-        textareaRef.current.style.height = "auto"
-        textareaRef.current.style.height = `${e.target.scrollHeight}px`
-    }
+  const handleContentChange = (newData: OutputData) => {
+    onUpdate({ ...note, content: JSON.stringify(newData) });
   };
 
   const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,15 +55,35 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
     onUpdate({ ...note, tags: newTags });
   }
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-
-  useEffect(() => {
-    if (isEditing && textareaRef.current) {
-      textareaRef.current.style.height = "auto"
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
-      textareaRef.current.focus();
+  let parsedContent: OutputData | undefined = undefined;
+  try {
+    if (note.content) {
+      const parsed = JSON.parse(note.content);
+      // Basic validation for Editor.js data
+      if (parsed && typeof parsed === 'object' && Array.isArray(parsed.blocks)) {
+        parsedContent = parsed;
+      }
     }
-  }, [note.content, isEditing])
+  } catch (error) {
+    console.warn("Could not parse note content as Editor.js data.", error);
+  }
+  
+  // Fallback for old markdown or invalid content
+  if (!parsedContent) {
+    parsedContent = {
+      time: new Date().getTime(),
+      blocks: [
+        {
+          id: 'initial-block',
+          type: "paragraph",
+          data: {
+            text: note.content || "",
+          },
+        },
+      ],
+      version: "2.29.1",
+    };
+  }
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -98,12 +91,9 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
         <Input
           value={note.title}
           onChange={handleTitleChange}
+          placeholder="Note title..."
           className="text-3xl md:text-4xl font-bold font-headline h-auto border-none focus-visible:ring-0 shadow-none p-0"
         />
-        <Button variant="ghost" size="sm" onClick={() => setIsEditing(!isEditing)} className="ml-4 flex-shrink-0">
-            {isEditing ? <Eye className="mr-2 h-4 w-4" /> : <Edit className="mr-2 h-4 w-4" />}
-            {isEditing ? "Preview" : "Edit"}
-        </Button>
       </div>
 
       <div className="flex items-center gap-2 mt-4 mb-6">
@@ -126,30 +116,12 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
           />
         </div>
       </div>
-
-      <div className="prose prose-stone dark:prose-invert max-w-none">
-        {isEditing ? (
-          <Textarea
-              ref={textareaRef}
-              value={note.content}
-              onChange={handleContentChange}
-              placeholder="Start writing your note here... You can use Markdown for formatting."
-              className="w-full text-base border-none focus-visible:ring-0 shadow-none p-0 resize-none overflow-hidden min-h-[400px]"
-          />
-        ) : (
-          <div onClick={() => setIsEditing(true)} className="cursor-text">
-              <ReactMarkdown
-                  remarkPlugins={[remarkGfm, remarkBreaks]}
-                  className="min-h-[400px]"
-                  components={{
-                      img: ({node, ...props}) => <img {...props} className="rounded-lg" alt={props.alt || ""} />,
-                  }}
-              >
-                  {note.content}
-              </ReactMarkdown>
-          </div>
-        )}
-      </div>
+      
+      <Editor
+        holder={`editor-instance-${note.id}`}
+        onChange={handleContentChange}
+        data={parsedContent}
+      />
     </div>
   )
 }

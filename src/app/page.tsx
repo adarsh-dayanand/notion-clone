@@ -1,3 +1,4 @@
+
 "use client"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -58,26 +59,43 @@ export type Note = {
 };
 
 const initialNotes: Note[] = [
-  { id: 1, title: "Project Phoenix Kick-off", content: `Team,
-
-This document outlines the agenda and goals for our Project Phoenix kick-off meeting. Please review it beforehand.
-
-### Agenda
-
-1.  **Introductions (5 mins)** - Brief intros from all team members.
-2.  **Project Overview (15 mins)** - High-level goals, scope, and expected outcomes.
-3.  **Roles & Responsibilities (10 mins)** - Clarifying who owns what.
-4.  **Timeline & Milestones (15 mins)** - Key dates and deliverables for Q3.
-5.  **Q&A (10 mins)** - Open floor for questions.
-
-### Pre-reading
--   [Project Brief](https://example.com)
--   [Market Analysis](https://example.com)
-
-Looking forward to a productive session!`, tags: ["ProjectX", "High-Priority"], isPrivate: false },
-  { id: 2, title: "Q3 Marketing Strategy", content: "Marketing strategy content here.", tags: ["Marketing"], isPrivate: false },
-  { id: 3, title: "Engineering All-Hands", content: "Engineering all-hands content here.", tags: ["Engineering"], isPrivate: false },
-  { id: 4, title: "Design System Updates", content: "Design system updates content here.", tags: ["Design"], isPrivate: true, password: "password123" },
+  { id: 1, title: "Project Phoenix Kick-off", content: JSON.stringify({
+      time: 1672531200000,
+      blocks: [
+        { id: "1", type: "paragraph", data: { text: "Team," } },
+        { id: "2", type: "paragraph", data: { text: "This document outlines the agenda and goals for our Project Phoenix kick-off meeting. Please review it beforehand." } },
+        { id: "3", type: "header", data: { text: "Agenda", level: 3 } },
+        { id: "4", type: "list", data: { style: "ordered", items: [
+          "<b>Introductions (5 mins)</b> - Brief intros from all team members.",
+          "<b>Project Overview (15 mins)</b> - High-level goals, scope, and expected outcomes.",
+          "<b>Roles & Responsibilities (10 mins)</b> - Clarifying who owns what.",
+          "<b>Timeline & Milestones (15 mins)</b> - Key dates and deliverables for Q3.",
+          "<b>Q&A (10 mins)</b> - Open floor for questions."
+        ] } },
+        { id: "5", type: "header", data: { text: "Pre-reading", level: 3 } },
+        { id: "6", type: "list", data: { style: "unordered", items: [
+          "<a href=\"https://example.com\">Project Brief</a>",
+          "<a href=\"https://example.com\">Market Analysis</a>"
+        ] } },
+        { id: "7", type: "paragraph", data: { text: "Looking forward to a productive session!" } }
+      ],
+      version: "2.29.1"
+    }), tags: ["ProjectX", "High-Priority"], isPrivate: false },
+  { id: 2, title: "Q3 Marketing Strategy", content: JSON.stringify({
+      time: 1672531200000,
+      blocks: [{ id: "1", type: "paragraph", data: { text: "Marketing strategy content here." } }],
+      version: "2.29.1"
+    }), tags: ["Marketing"], isPrivate: false },
+  { id: 3, title: "Engineering All-Hands", content: JSON.stringify({
+      time: 1672531200000,
+      blocks: [{ id: "1", type: "paragraph", data: { text: "Engineering all-hands content here." } }],
+      version: "2.29.1"
+    }), tags: ["Engineering"], isPrivate: false },
+  { id: 4, title: "Design System Updates", content: JSON.stringify({
+      time: 1672531200000,
+      blocks: [{ id: "1", type: "paragraph", data: { text: "Design system updates content here." } }],
+      version: "2.29.1"
+    }), tags: ["Design"], isPrivate: true, password: "password123" },
 ]
 
 export default function DashboardPage() {
@@ -96,6 +114,7 @@ export default function DashboardPage() {
 
   const handleSetPassword = (noteId: number, password: string) => {
     setNotes(notes.map(note => note.id === noteId ? { ...note, isPrivate: true, password: password } : note));
+    setUnlockedNoteIds(unlockedNoteIds.filter(id => id !== noteId));
     toast({ title: "Note is now private", description: "The note has been secured with a password." });
   }
   
@@ -327,3 +346,5 @@ export default function DashboardPage() {
     </SidebarProvider>
   )
 }
+
+    
