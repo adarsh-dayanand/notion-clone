@@ -11,6 +11,7 @@ import {
   Users,
   Bell,
   Lock,
+  Trash,
 } from "lucide-react"
 
 import {
@@ -26,12 +27,23 @@ import {
   SidebarFooter
 } from "@/components/ui/sidebar"
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { UserNav } from "@/components/user-nav"
 import { NoteEditor } from "@/components/note-editor"
 import { ShareDialog } from "@/components/share-dialog"
 import { ManagePrivacyDialog } from "@/components/manage-privacy-dialog"
 import { UnlockPrompt } from "@/components/unlock-prompt"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
@@ -109,6 +121,29 @@ export default function DashboardPage() {
     setNotes(notes.map(note => note.id === updatedNote.id ? updatedNote : note));
   }
 
+  const handleDeleteNote = (noteId: number) => {
+    if (notes.length <= 1) {
+      toast({
+        title: "Cannot delete last note",
+        description: "You must have at least one note.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const noteToDeleteIndex = notes.findIndex((note) => note.id === noteId);
+    const newNotes = notes.filter((note) => note.id !== noteId);
+    
+    setNotes(newNotes);
+
+    if (selectedNoteId === noteId) {
+      const newIndex = Math.max(0, noteToDeleteIndex - 1);
+      setSelectedNoteId(newNotes[newIndex].id);
+    }
+    
+    toast({ title: "Note deleted" });
+  };
+
   return (
     <SidebarProvider>
       <Sidebar>
@@ -168,7 +203,7 @@ export default function DashboardPage() {
       <SidebarInset>
         <header className="flex items-center justify-between p-4 border-b">
           <div>
-            <p className="text-sm text-muted-foreground">Notes / {selectedNote.title}</p>
+            {selectedNote && <p className="text-sm text-muted-foreground">Notes / {selectedNote.title}</p>}
           </div>
           <div className="flex items-center gap-4">
             <ManagePrivacyDialog 
@@ -177,6 +212,30 @@ export default function DashboardPage() {
               onRemovePassword={handleRemovePassword}
             />
             <ShareDialog />
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <Trash className="h-4 w-4 text-destructive" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete your note.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className={buttonVariants({ variant: "destructive" })}
+                    onClick={() => handleDeleteNote(selectedNote.id)}
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="icon" className="relative">
@@ -256,10 +315,14 @@ export default function DashboardPage() {
           </div>
         </header>
         <main className="p-4 md:p-8">
-          {isNoteUnlocked ? (
+          {selectedNote && isNoteUnlocked ? (
             <NoteEditor note={selectedNote} onUpdate={handleUpdateNote} />
-          ) : (
+          ) : selectedNote ? (
             <UnlockPrompt note={selectedNote} onUnlock={handleUnlockNote} />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full min-h-[400px]">
+              <p>No note selected.</p>
+            </div>
           )}
         </main>
       </SidebarInset>
