@@ -5,12 +5,13 @@ import { getAuth } from "firebase/auth";
 // IMPORTANT: Replace the following with your actual Firebase project configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyYOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "1:YOUR_SENDER_ID:web:YOUR_APP_ID"
+  apiKey: "AIzaSyD5YSMTWAVVgOANa9bUsRfVHrQEm4Qsdp4",
+  authDomain: "ad-notion-clone.firebaseapp.com",
+  projectId: "ad-notion-clone",
+  storageBucket: "ad-notion-clone.firebasestorage.app",
+  messagingSenderId: "719366042363",
+  appId: "1:719366042363:web:1aa885115528572b25f65e",
+  measurementId: "G-9E0P8SRGT6"
 };
 
 // Initialize Firebase

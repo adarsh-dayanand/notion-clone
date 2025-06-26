@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Notebook } from "lucide-react";
+import { BrainCircuit } from "lucide-react";
 import {
   signInWithPopup,
   GoogleAuthProvider,
@@ -48,8 +48,8 @@ export default function LoginPage() {
       <div className="w-full max-w-sm text-center">
         <div className="mb-8 flex justify-center">
           <div className="flex items-center gap-2">
-            <Notebook className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold font-headline">NextNote</h1>
+            <BrainCircuit className="h-8 w-8 text-primary" />
+            <h1 className="text-3xl font-bold font-headline">Memo</h1>
           </div>
         </div>
         <div className="space-y-4">

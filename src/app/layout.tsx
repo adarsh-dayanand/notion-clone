@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'NextNote',
-  description: 'A Notion clone built with Next.js',
+  title: 'Memo',
+  description: 'A smart note-taking app.',
 };
 
 export default function RootLayout({

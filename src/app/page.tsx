@@ -3,7 +3,7 @@ import Link from "next/link"
 import {
   FileText,
   Home,
-  Notebook,
+  BrainCircuit,
   PlusCircle,
   Settings,
   Share2,
@@ -43,9 +43,9 @@ export default function DashboardPage() {
         <SidebarHeader>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="shrink-0">
-              <Notebook className="size-5 text-primary" />
+              <BrainCircuit className="size-5 text-primary" />
             </Button>
-            <h1 className="text-lg font-semibold font-headline">NextNote</h1>
+            <h1 className="text-lg font-semibold font-headline">Memo</h1>
           </div>
         </SidebarHeader>
         <SidebarContent className="p-2">
