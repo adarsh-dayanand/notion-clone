@@ -28,40 +28,79 @@ interface NoteEditorProps {
     readOnly?: boolean;
 }
 
+function parseContent(content: string): OutputData {
+  try {
+    if (content) {
+      const parsed = JSON.parse(content);
+      if (parsed && typeof parsed === 'object' && Array.isArray(parsed.blocks)) {
+        return parsed;
+      }
+    }
+  } catch (error) {
+    console.warn("Could not parse note content as Editor.js data.", error);
+  }
+  
+  return {
+    time: new Date().getTime(),
+    blocks: [
+      {
+        id: 'initial-block',
+        type: "paragraph",
+        data: {
+          text: content || "",
+        },
+      },
+    ],
+    version: "2.29.1",
+  };
+}
+
 export function NoteEditor({ note, onUpdate, readOnly = false }: NoteEditorProps) {
   const [title, setTitle] = useState(note.title);
   const [tags, setTags] = useState(note.tags);
-  const [content, setContent] = useState<OutputData | undefined>(() => {
-    try {
-      if (note.content) {
-        const parsed = JSON.parse(note.content);
-        if (parsed && typeof parsed === 'object' && Array.isArray(parsed.blocks)) {
-          return parsed;
-        }
-      }
-    } catch (error) {
-      console.warn("Could not parse note content as Editor.js data.", error);
-    }
-    
-    return {
-      time: new Date().getTime(),
-      blocks: [
-        {
-          id: 'initial-block',
-          type: "paragraph",
-          data: {
-            text: note.content || "",
-          },
-        },
-      ],
-      version: "2.29.1",
-    };
-  });
-  
   const [tagInput, setTagInput] = useState("")
   const { toast } = useToast()
   
+  const [editorData, setEditorData] = useState<OutputData>(() => parseContent(note.content));
+  const [editorKey, setEditorKey] = useState(note.id);
+  
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Effect to sync local state with changes from the server (e.g., from other collaborators)
+  useEffect(() => {
+    let hasSynced = false;
+    // Sync title
+    if (note.title !== title) {
+      setTitle(note.title);
+      hasSynced = true;
+    }
+    // Sync tags
+    if (JSON.stringify(note.tags) !== JSON.stringify(tags)) {
+      setTags(note.tags);
+      hasSynced = true;
+    }
+
+    // Sync content
+    try {
+      const localContentString = JSON.stringify(editorData);
+      if (note.content && note.content !== localContentString) {
+        setEditorData(parseContent(note.content));
+        // Force a re-mount of the editor component to correctly load the new data
+        setEditorKey(`${note.id}-${new Date().getTime()}`);
+        hasSynced = true;
+      }
+    } catch (e) {
+      console.error("Error during note content sync:", e);
+    }
+    
+    if (hasSynced) {
+       toast({
+        title: "Note updated",
+        description: "Changes from a collaborator have been loaded.",
+      });
+    }
+
+  }, [note]); // This effect depends on the `note` object from the server.
 
   // Debounced auto-save effect
   useEffect(() => {
@@ -72,7 +111,7 @@ export function NoteEditor({ note, onUpdate, readOnly = false }: NoteEditorProps
     }
 
     saveTimeoutRef.current = setTimeout(() => {
-      const contentString = content ? JSON.stringify(content) : "{}";
+      const contentString = editorData ? JSON.stringify(editorData) : "{}";
       const updatedFields: Partial<Note> = {};
       
       if (title !== note.title) {
@@ -88,21 +127,21 @@ export function NoteEditor({ note, onUpdate, readOnly = false }: NoteEditorProps
       if (Object.keys(updatedFields).length > 0) {
         onUpdate(updatedFields);
       }
-    }, 1000); // 1-second debounce
+    }, 1500); // 1.5-second debounce
 
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [title, content, tags, note, onUpdate, readOnly]);
+  }, [title, editorData, tags, note, onUpdate, readOnly]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(e.target.value);
   };
   
   const handleContentChange = (newData: OutputData) => {
-    setContent(newData);
+    setEditorData(newData);
   };
 
   const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -173,9 +212,10 @@ export function NoteEditor({ note, onUpdate, readOnly = false }: NoteEditorProps
       </div>
       
       <Editor
-        holder={`editor-instance-${note.id}`}
+        key={editorKey}
+        holder={`editor-instance-${editorKey}`}
         onChange={handleContentChange}
-        data={content}
+        data={editorData}
         readOnly={readOnly}
       />
     </div>

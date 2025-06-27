@@ -43,19 +43,20 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
   const [note, setNote] = useState<NoteType | null>(null);
   const [decryptedContent, setDecryptedContent] = useState<string | null>(null);
   const [permission, setPermission] = useState<NotePermission | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (noteSnapshot?.exists() && user) {
       const data = { id: noteSnapshot.id, ...noteSnapshot.data() } as NoteType;
       
       const userPermission = data.permissions?.[user.uid] || null;
-      setPermission(userPermission);
       
       if (!userPermission) {
         setNote(null);
         return;
       }
       
+      setPermission(userPermission);
       setNote(data);
       if (!data.isPrivate) {
         setDecryptedContent(data.content);
@@ -73,10 +74,18 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
 
   const handleUpdateNote = async (updatedFields: Partial<NoteType>) => {
     if (!noteRef || permission === 'viewer') return;
-    await updateDoc(noteRef, {
-      ...updatedFields,
-      updatedAt: serverTimestamp(),
-    });
+    setIsSaving(true);
+    try {
+      await updateDoc(noteRef, {
+        ...updatedFields,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error: any) {
+      console.error("Save failed:", error);
+      toast({ title: "Error saving note", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSetPassword = async (password: string) => {
@@ -167,8 +176,14 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
   return (
     <>
       <header className="flex items-center justify-between p-4 border-b">
-        <div>
+        <div className="flex items-center gap-4">
           <p className="text-sm text-muted-foreground truncate">Notes / {note.title}</p>
+          {isSaving && (
+            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Saving...</span>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
           {permission === 'owner' && (
