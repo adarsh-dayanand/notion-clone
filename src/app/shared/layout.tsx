@@ -83,8 +83,8 @@ export default function SharedLayout({
         <SidebarContent className="p-2">
           <SidebarMenu>
             <SidebarMenuItem>
-               <SidebarMenuButton asChild isActive={pathname.startsWith("/note")}>
-                <Link href={notes.length > 0 ? `/note/${notes[0].id}` : "/"}>
+               <SidebarMenuButton asChild isActive={pathname.startsWith("/home")}>
+                <Link href="/home">
                   <Home />
                   Home
                 </Link>

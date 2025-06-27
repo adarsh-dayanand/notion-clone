@@ -24,7 +24,7 @@ export default function LoginPage() {
   // When the auth state is resolved, redirect the user to the main page if they are logged in.
   useEffect(() => {
     if (!loading && user) {
-      router.replace('/');
+      router.replace('/home');
     }
   }, [user, loading, router]);
 

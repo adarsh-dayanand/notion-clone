@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useParams, usePathname, useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
 import {
   FileText,
@@ -27,21 +27,19 @@ import {
   SidebarSeparator,
   SidebarProvider,
   SidebarFooter,
-  SidebarMenuSkeleton
+  SidebarMenuSkeleton 
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button";
 import { auth, db } from "@/lib/firebase";
-import { Skeleton } from "@/components/ui/skeleton";
 import type { Note } from '@/lib/types';
 
 
-export default function SettingsLayout({
+export default function HomeLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const params = useParams();
   const router = useRouter();
   const [user] = useAuthState(auth);
 
@@ -119,7 +117,7 @@ export default function SettingsLayout({
             ) : (
               notes.map((note) => (
                 <SidebarMenuItem key={note.id}>
-                  <SidebarMenuButton asChild isActive={params.noteId === note.id}>
+                  <SidebarMenuButton asChild isActive={false}>
                     <Link href={`/note/${note.id}`}>
                       {note.isPrivate ? <Lock className="h-4 w-4" /> : <FileText />}
                       <span className="truncate">{note.title}</span>
