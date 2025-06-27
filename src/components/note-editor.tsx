@@ -1,6 +1,7 @@
+
 "use client"
 
-import { useState, type KeyboardEvent } from "react"
+import { useState, type KeyboardEvent, useEffect, useRef } from "react"
 import dynamic from "next/dynamic"
 import { X, Tag } from "lucide-react"
 import type { OutputData } from "@editorjs/editorjs"
@@ -27,61 +28,21 @@ interface NoteEditorProps {
 }
 
 export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
-  const [tagInput, setTagInput] = useState("")
-  const { toast } = useToast()
-  
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onUpdate({ title: e.target.value });
-  };
-  
-  const handleContentChange = (newData: OutputData) => {
-    onUpdate({ content: JSON.stringify(newData) });
-  };
-
-  const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTagInput(e.target.value)
-  }
-
-  const handleTagInputKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && tagInput.trim() !== "") {
-      e.preventDefault()
-      if (!note.tags.includes(tagInput.trim())) {
-        const newTags = [...note.tags, tagInput.trim()];
-        onUpdate({ tags: newTags });
-        setTagInput("")
-        toast({
-          title: "Tag added",
-          description: `The tag "${tagInput.trim()}" has been added to the note.`,
-        })
+  const [title, setTitle] = useState(note.title);
+  const [tags, setTags] = useState(note.tags);
+  const [content, setContent] = useState<OutputData | undefined>(() => {
+    try {
+      if (note.content) {
+        const parsed = JSON.parse(note.content);
+        if (parsed && typeof parsed === 'object' && Array.isArray(parsed.blocks)) {
+          return parsed;
+        }
       }
+    } catch (error) {
+      console.warn("Could not parse note content as Editor.js data.", error);
     }
-    if (e.key === "Backspace" && tagInput === "" && note.tags.length > 0) {
-      const newTags = note.tags.slice(0, -1)
-      onUpdate({ tags: newTags });
-    }
-  }
-
-  const removeTag = (tagToRemove: string) => {
-    const newTags = note.tags.filter((tag) => tag !== tagToRemove);
-    onUpdate({ tags: newTags });
-  }
-
-  let parsedContent: OutputData | undefined = undefined;
-  try {
-    if (note.content) {
-      const parsed = JSON.parse(note.content);
-      // Basic validation for Editor.js data
-      if (parsed && typeof parsed === 'object' && Array.isArray(parsed.blocks)) {
-        parsedContent = parsed;
-      }
-    }
-  } catch (error) {
-    console.warn("Could not parse note content as Editor.js data.", error);
-  }
-  
-  // Fallback for old markdown or invalid content
-  if (!parsedContent) {
-    parsedContent = {
+    
+    return {
       time: new Date().getTime(),
       blocks: [
         {
@@ -94,15 +55,87 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
       ],
       version: "2.29.1",
     };
+  });
+  
+  const [tagInput, setTagInput] = useState("")
+  const { toast } = useToast()
+  
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Debounced auto-save effect
+  useEffect(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(() => {
+      const contentString = content ? JSON.stringify(content) : "{}";
+      const updatedFields: Partial<Note> = {};
+      
+      if (title !== note.title) {
+        updatedFields.title = title;
+      }
+      if (contentString !== note.content) {
+        updatedFields.content = contentString;
+      }
+      if (JSON.stringify(tags) !== JSON.stringify(note.tags)) {
+        updatedFields.tags = tags;
+      }
+
+      if (Object.keys(updatedFields).length > 0) {
+        onUpdate(updatedFields);
+      }
+    }, 1000); // 1-second debounce
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [title, content, tags, note, onUpdate]);
+
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTitle(e.target.value);
+  };
+  
+  const handleContentChange = (newData: OutputData) => {
+    setContent(newData);
+  };
+
+  const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTagInput(e.target.value)
   }
 
+  const handleTagInputKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && tagInput.trim() !== "") {
+      e.preventDefault()
+      const newTag = tagInput.trim();
+      if (!tags.includes(newTag)) {
+        setTags([...tags, newTag]);
+        setTagInput("")
+        toast({
+          title: "Tag added",
+          description: `The tag "${newTag}" has been added to the note.`,
+        })
+      }
+    }
+    if (e.key === "Backspace" && tagInput === "" && tags.length > 0) {
+      const newTags = tags.slice(0, -1)
+      setTags(newTags);
+    }
+  }
+
+  const removeTag = (tagToRemove: string) => {
+    const newTags = tags.filter((tag) => tag !== tagToRemove);
+    setTags(newTags);
+  }
+  
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex justify-between items-start mb-4">
         <Input
-          value={note.title}
+          value={title}
           onChange={handleTitleChange}
-          onBlur={() => onUpdate({ title: note.title })}
           placeholder="Note title..."
           className="text-3xl md:text-4xl font-bold font-headline h-auto border-none focus-visible:ring-0 shadow-none p-0"
         />
@@ -111,7 +144,7 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
       <div className="flex items-center gap-2 mt-4 mb-6">
         <Tag className="h-5 w-5 text-muted-foreground" />
         <div className="flex flex-wrap items-center gap-2">
-          {note.tags.map((tag) => (
+          {tags.map((tag) => (
             <Badge key={tag} variant="secondary" className="text-sm">
               {tag}
               <button onClick={() => removeTag(tag)} className="ml-1.5 rounded-full hover:bg-muted-foreground/20 p-0.5">
@@ -132,7 +165,7 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
       <Editor
         holder={`editor-instance-${note.id}`}
         onChange={handleContentChange}
-        data={parsedContent}
+        data={content}
       />
     </div>
   )
