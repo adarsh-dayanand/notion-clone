@@ -144,7 +144,7 @@ export function NoteEditor({ note, onUpdate, onTagUpdate, readOnly = false }: No
           });
         }
       }
-    }, 1500);
+    }, 6000);
 
     return () => {
       if (saveTimeoutRef.current) {
