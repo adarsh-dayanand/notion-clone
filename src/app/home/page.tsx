@@ -114,7 +114,7 @@ export default function HomePage() {
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {notes.map(note => (
               <Link href={`/note/${note.id}`} key={note.id}>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer h-full flex flex-col">
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full flex flex-col">
                   <CardHeader className="flex-grow">
                     <CardTitle className="flex items-center gap-2">
                       {note.isPrivate ? <Lock className="h-4 w-4 text-muted-foreground" /> : <FileText className="h-4 w-4 text-muted-foreground" />}

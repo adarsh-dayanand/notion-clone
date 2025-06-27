@@ -19,6 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Loader2 } from 'lucide-react';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SettingsNav } from '@/components/settings-nav';
 
 export default function SettingsPage() {
     const [user, loading] = useAuthState(auth);
@@ -192,103 +193,107 @@ export default function SettingsPage() {
                 <SidebarTrigger className="md:hidden mt-1.5" />
                 <div>
                     <h1 className="text-3xl font-bold font-headline">Settings</h1>
-                    <p className="text-muted-foreground">Manage your account settings.</p>
+                    <p className="text-muted-foreground">Manage your account and profile settings.</p>
                 </div>
             </header>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Profile</CardTitle>
-                    <CardDescription>Update your name and profile picture.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex items-center space-x-4">
-                        <Avatar className="h-20 w-20">
-                            <AvatarImage src={previewImage || undefined} alt={displayName} data-ai-hint="user avatar" />
-                            <AvatarFallback>{displayName?.charAt(0).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            ref={fileInputRef}
-                            onChange={handleProfileImageChange}
-                            className="hidden"
-                        />
-                        <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                            Change Picture
-                        </Button>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="displayName">Display Name</Label>
-                        <Input
-                            id="displayName"
-                            value={displayName}
-                            onChange={(e) => setDisplayName(e.target.value)}
-                        />
-                    </div>
-                </CardContent>
-                <CardFooter>
-                    <Button onClick={handleProfileUpdate} disabled={isSubmitting}>
-                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Save Changes
-                    </Button>
-                </CardFooter>
-            </Card>
+            <SettingsNav />
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Email Address</CardTitle>
-                    <CardDescription>Update your login email.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                        id="email"
-                        type="email"
-                        value={newEmail}
-                        onChange={(e) => setNewEmail(e.target.value)}
-                    />
-                </CardContent>
-                <CardFooter>
-                     <Button onClick={handleEmailUpdate} disabled={isSubmitting}>
-                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Update Email
-                    </Button>
-                </CardFooter>
-            </Card>
-            
-            <Card className="border-destructive">
-                <CardHeader>
-                    <CardTitle>Delete Account</CardTitle>
-                    <CardDescription>Permanently delete your account and all of your content.</CardDescription>
-                </CardHeader>
-                <CardFooter>
-                    <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="destructive" disabled={isSubmitting}>Delete Account</Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete your account and remove all your data from our servers.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                    className={buttonVariants({ variant: "destructive" })}
-                                    onClick={handleDeleteAccount}
-                                    disabled={isSubmitting}
-                                >
-                                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Yes, delete my account
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                </CardFooter>
-            </Card>
+            <div className="space-y-8">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Profile</CardTitle>
+                        <CardDescription>Update your name and profile picture.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex items-center space-x-4">
+                            <Avatar className="h-20 w-20">
+                                <AvatarImage src={previewImage || undefined} alt={displayName} data-ai-hint="user avatar" />
+                                <AvatarFallback>{displayName?.charAt(0).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                ref={fileInputRef}
+                                onChange={handleProfileImageChange}
+                                className="hidden"
+                            />
+                            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                                Change Picture
+                            </Button>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="displayName">Display Name</Label>
+                            <Input
+                                id="displayName"
+                                value={displayName}
+                                onChange={(e) => setDisplayName(e.target.value)}
+                            />
+                        </div>
+                    </CardContent>
+                    <CardFooter>
+                        <Button onClick={handleProfileUpdate} disabled={isSubmitting}>
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Save Changes
+                        </Button>
+                    </CardFooter>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Email Address</CardTitle>
+                        <CardDescription>Update your login email.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                            id="email"
+                            type="email"
+                            value={newEmail}
+                            onChange={(e) => setNewEmail(e.target.value)}
+                        />
+                    </CardContent>
+                    <CardFooter>
+                        <Button onClick={handleEmailUpdate} disabled={isSubmitting}>
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Update Email
+                        </Button>
+                    </CardFooter>
+                </Card>
+                
+                <Card className="border-destructive">
+                    <CardHeader>
+                        <CardTitle>Delete Account</CardTitle>
+                        <CardDescription>Permanently delete your account and all of your content.</CardDescription>
+                    </CardHeader>
+                    <CardFooter>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" disabled={isSubmitting}>Delete Account</Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This action cannot be undone. This will permanently delete your account and remove all your data from our servers.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        className={buttonVariants({ variant: "destructive" })}
+                                        onClick={handleDeleteAccount}
+                                        disabled={isSubmitting}
+                                    >
+                                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        Yes, delete my account
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </CardFooter>
+                </Card>
+            </div>
         </div>
     );
 }
