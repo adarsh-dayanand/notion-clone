@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Share2, X, Loader2, Copy } from "lucide-react"
 import type { User as FirebaseUser } from 'firebase/auth'
-import { collection, query, where, getDocs, updateDoc, doc, getDoc, FieldValue, deleteField } from 'firebase/firestore'
+import { collection, query, where, getDocs, updateDoc, doc, getDoc, FieldValue, deleteField, addDoc, serverTimestamp } from 'firebase/firestore'
 
 import { Button } from "@/components/ui/button"
 import {
@@ -93,12 +93,25 @@ export function ShareDialog({ note, currentUser }: ShareDialogProps) {
         [`permissions.${userToShareWith.uid}`]: permission
       });
       
+      await addDoc(collection(db, 'notifications'), {
+        recipientId: userToShareWith.uid,
+        senderId: currentUser.uid,
+        senderProfile: {
+          displayName: currentUser.displayName,
+          photoURL: currentUser.photoURL,
+        },
+        noteId: note.id,
+        noteTitle: note.title,
+        type: 'share',
+        isRead: false,
+        createdAt: serverTimestamp(),
+      });
+
       toast({
         title: "Note Shared!",
-        description: `Successfully shared with ${email}.`,
+        description: `Successfully shared with ${email}. They will be notified.`,
       })
       setEmail("");
-      // Refresh collaborators list
       fetchCollaborators(); 
     } catch (error) {
       console.error("Error sharing note:", error);

@@ -14,6 +14,7 @@ import { PlusCircle, FileText, Lock, Loader2 } from 'lucide-react';
 import type { Note } from '@/lib/types';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 
 export default function HomePage() {
   const [user, loadingAuth] = useAuthState(auth);
@@ -72,9 +73,12 @@ export default function HomePage() {
   return (
     <>
       <header className="flex items-center justify-between p-4 border-b">
-        <div>
-          <h1 className="text-2xl font-bold font-headline">My Notes</h1>
-          <p className="text-muted-foreground">You have {notes.length} notes.</p>
+        <div className="flex items-center gap-4">
+            <SidebarTrigger className="md:hidden" />
+            <div>
+                <h1 className="text-2xl font-bold font-headline">My Notes</h1>
+                <p className="text-muted-foreground">You have {notes.length} notes.</p>
+            </div>
         </div>
         <Button onClick={handleNewNote}>
           <PlusCircle className="mr-2 h-4 w-4" />

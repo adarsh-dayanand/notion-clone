@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Loader2 } from 'lucide-react';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 
 export default function SettingsPage() {
     const [user, loading] = useAuthState(auth);
@@ -107,13 +108,11 @@ export default function SettingsPage() {
         if (!user) return;
         setIsSubmitting(true);
         try {
-            // Delete user's notes
             const notesQuery = query(collection(db, 'notes'), where('ownerId', '==', user.uid));
             const notesSnapshot = await getDocs(notesQuery);
             const deletePromises = notesSnapshot.docs.map((doc) => deleteDoc(doc.ref));
             await Promise.all(deletePromises);
             
-            // Delete user
             await deleteUser(user);
             toast({ title: 'Success', description: 'Your account and all associated data have been deleted.' });
             router.replace('/login');
@@ -134,9 +133,12 @@ export default function SettingsPage() {
 
     return (
         <div className="p-4 md:p-8 space-y-8 max-w-4xl mx-auto">
-            <header>
-                <h1 className="text-3xl font-bold font-headline">Settings</h1>
-                <p className="text-muted-foreground">Manage your account settings.</p>
+            <header className="flex items-start gap-4">
+                <SidebarTrigger className="md:hidden mt-1.5" />
+                <div>
+                    <h1 className="text-3xl font-bold font-headline">Settings</h1>
+                    <p className="text-muted-foreground">Manage your account settings.</p>
+                </div>
             </header>
 
             <Card>

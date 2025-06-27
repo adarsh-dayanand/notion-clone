@@ -1,11 +1,12 @@
 "use client"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { doc, getDoc, updateDoc, deleteDoc, serverTimestamp, collection, addDoc, arrayUnion, arrayRemove, type FieldValue } from "firebase/firestore"
-import { useDocument } from "react-firebase-hooks/firestore"
+import { doc, getDoc, updateDoc, deleteDoc, serverTimestamp, collection, addDoc, arrayUnion, arrayRemove, type FieldValue, query, where, orderBy, writeBatch, type Timestamp } from "firebase/firestore"
+import { useDocument, useCollection } from "react-firebase-hooks/firestore"
 import { useAuthState } from 'react-firebase-hooks/auth'
 import { Bell, Trash, Loader2, ShieldOff, BrainCircuit, History } from "lucide-react"
-import { format } from "date-fns"
+import { format, formatDistanceToNow } from "date-fns"
 
 import {
   AlertDialog,
@@ -30,7 +31,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
 import { auth, db } from "@/lib/firebase"
 import { encrypt, decrypt } from "@/lib/crypto"
-import type { Note as NoteType, NotePermission, NoteVersion } from "@/lib/types"
+import { SidebarTrigger } from "@/components/ui/sidebar"
+import type { Note as NoteType, NotePermission, NoteVersion, Notification } from "@/lib/types"
 
 export default function NotePage({ params }: { params: { noteId: string } }) {
   const { noteId } = params;
@@ -46,6 +48,18 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
   const [permission, setPermission] = useState<NotePermission | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [sessionPassword, setSessionPassword] = useState<string | null>(null);
+
+  const notificationsRef = user ? query(collection(db, 'notifications'), where('recipientId', '==', user.uid), orderBy('createdAt', 'desc')) : null;
+  const [notificationsSnapshot] = useCollection(notificationsRef);
+
+  const notifications = useMemo(() => {
+    if (!notificationsSnapshot) return [];
+    return notificationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Notification);
+  }, [notificationsSnapshot]);
+
+  const unreadNotifications = useMemo(() => {
+      return notifications.filter(n => !n.isRead);
+  }, [notifications]);
 
   useEffect(() => {
     if (noteSnapshot?.exists() && user) {
@@ -64,13 +78,10 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
         setDecryptedContent(data.content);
         setSessionPassword(null);
       } else {
-        // Reset decrypted content if note is private and not yet unlocked
-        // or if the user changes. We also clear the session password.
         setDecryptedContent(null);
         setSessionPassword(null);
       }
     } else if (!loadingNote) {
-        // If note doesn't exist after loading, clear it
         setNote(null);
     }
   }, [noteSnapshot, user, loadingNote]);
@@ -79,15 +90,19 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
   const handleUpdateNote = async (updatedFields: Partial<NoteType>) => {
     if (!noteRef || !note || !user || permission === 'viewer') return;
 
-    // 1. Create a version if content has changed.
+    if (updatedFields.content && note.isPrivate && !sessionPassword) {
+      toast({ title: "Cannot save private note", description: "Session password not found. Please unlock the note again.", variant: "destructive" });
+      return;
+    }
+
     const oldContent = note.isPrivate ? decryptedContent : note.content;
     if (updatedFields.content && oldContent && updatedFields.content !== oldContent) {
         const versionsCol = collection(db, "notes", note.id, "versions");
         await addDoc(versionsCol, {
             title: note.title,
-            content: oldContent, // The content before the current update
+            content: oldContent,
             savedAt: note.updatedAt,
-            savedBy: user.uid, // The user performing the update
+            savedBy: user.uid,
         });
     }
 
@@ -95,18 +110,10 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
     try {
         let finalUpdates = { ...updatedFields };
 
-        // 2. Re-encrypt content if note is private.
-        if (finalUpdates.content && note.isPrivate) {
-            if (sessionPassword) {
-                finalUpdates.content = encrypt(finalUpdates.content, sessionPassword);
-            } else {
-                toast({ title: "Cannot save private note", description: "Session password not found. Please unlock the note again.", variant: "destructive" });
-                setIsSaving(false);
-                return;
-            }
+        if (finalUpdates.content && note.isPrivate && sessionPassword) {
+           finalUpdates.content = encrypt(finalUpdates.content, sessionPassword);
         }
         
-        // 3. Update the note.
         await updateDoc(noteRef, {
             ...finalUpdates,
             updatedAt: serverTimestamp(),
@@ -194,7 +201,6 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
     setIsSaving(true);
     try {
         let newContent = version.content;
-        // If the note is currently private, we need to encrypt the restored content.
         if (note.isPrivate) {
              if (sessionPassword) {
                 newContent = encrypt(newContent, sessionPassword);
@@ -217,6 +223,20 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
         setIsSaving(false);
     }
   }
+
+  const handleMarkNotificationsAsRead = async () => {
+      if (!user || unreadNotifications.length === 0) return;
+      const batch = writeBatch(db);
+      unreadNotifications.forEach(n => {
+          const notifRef = doc(db, 'notifications', n.id);
+          batch.update(notifRef, { isRead: true });
+      });
+      try {
+          await batch.commit();
+      } catch (error) {
+          console.error("Error marking notifications as read:", error);
+      }
+  };
 
   if (loadingAuth || loadingNote) {
      return (
@@ -249,7 +269,7 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
      )
   }
 
-  if (!note) return null; // Should not happen if permission exists, but for type safety
+  if (!note) return null;
 
   const isNoteUnlocked = !note.isPrivate || !!decryptedContent;
   const isReadOnly = permission === 'viewer';
@@ -258,14 +278,17 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
   return (
     <>
       <header className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-4">
-          <p className="text-sm text-muted-foreground truncate">Notes / {note.title}</p>
-          {isSaving && (
-            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Saving...</span>
-            </div>
-          )}
+        <div className="flex items-center gap-2 md:gap-4">
+          <SidebarTrigger className="md:hidden" />
+          <div className="flex items-center gap-4">
+              <p className="text-sm text-muted-foreground truncate">Notes / {note.title}</p>
+              {isSaving && (
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Saving...</span>
+                </div>
+              )}
+          </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
           <VersionHistory noteId={note.id} onRestore={handleRestoreVersion} disabled={isReadOnly} />
@@ -304,14 +327,16 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
               </AlertDialog>
             </>
           )}
-          <Popover>
+          <Popover onOpenChange={(open) => { if (open) handleMarkNotificationsAsRead() }}>
             <PopoverTrigger asChild>
               <Button variant="outline" size="icon" className="relative">
                 <Bell className="h-4 w-4" />
-                <span className="absolute top-0 right-0 flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-                </span>
+                {unreadNotifications.length > 0 && (
+                  <span className="absolute top-0 right-0 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                  </span>
+                )}
                 <span className="sr-only">Notifications</span>
               </Button>
             </PopoverTrigger>
@@ -320,27 +345,34 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
                   <div className="space-y-2">
                     <h4 className="font-medium leading-none">Notifications</h4>
                     <p className="text-sm text-muted-foreground">
-                      You have 3 unread messages.
+                      You have {unreadNotifications.length} unread messages.
                     </p>
                   </div>
-                  <div className="grid gap-4">
-                    <div className="flex items-start gap-4">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src="https://placehold.co/100x100.png" alt="Olivia Martin" data-ai-hint="female avatar" />
-                        <AvatarFallback>OM</AvatarFallback>
-                      </Avatar>
-                      <div className="grid gap-1">
-                        <p className="text-sm font-medium">
-                          <span className="font-semibold">Olivia Martin</span> shared a note with you.
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          "Q4 Product Roadmap"
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          5 minutes ago
-                        </p>
-                      </div>
-                    </div>
+                  <div className="grid gap-2">
+                    {notifications.length > 0 ? (
+                      notifications.slice(0, 5).map(n => (
+                        <div className="flex items-start gap-4" key={n.id}>
+                          <Avatar className="h-8 w-8">
+                              <AvatarImage src={n.senderProfile.photoURL || 'https://placehold.co/100x100.png'} alt={n.senderProfile.displayName || 'User'} data-ai-hint="user avatar" />
+                              <AvatarFallback>{n.senderProfile.displayName?.charAt(0) || 'U'}</AvatarFallback>
+                          </Avatar>
+                          <div className="grid gap-1">
+                              <p className="text-sm font-medium">
+                                  <span className="font-semibold">{n.senderProfile.displayName}</span>
+                                  {n.type === 'share' ? ' shared a note with you.' : ' updated a note.'}
+                              </p>
+                              <Link href={`/note/${n.noteId}`} className="text-sm text-muted-foreground hover:underline truncate">
+                                "{n.noteTitle}"
+                              </Link>
+                              <p className="text-xs text-muted-foreground">
+                                  {(n.createdAt as Timestamp)?.toDate && formatDistanceToNow((n.createdAt as Timestamp).toDate(), { addSuffix: true })}
+                              </p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-4">No new notifications.</p>
+                    )}
                   </div>
                 </div>
               </PopoverContent>

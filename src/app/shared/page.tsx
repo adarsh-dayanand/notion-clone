@@ -14,6 +14,7 @@ import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/comp
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Note, UserProfile, NotePermission } from "@/lib/types";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
 interface SharedNote extends Note {
   ownerProfile?: UserProfile;
@@ -81,11 +82,14 @@ export default function SharedPage() {
   return (
     <>
       <header className="flex items-center justify-between p-4 border-b">
-        <div>
-          <h1 className="text-2xl font-bold font-headline">Shared with Me</h1>
-          <p className="text-muted-foreground">
-            {loadingNotes ? 'Loading notes...' : `You have ${sharedNotes.length} notes shared with you.`}
-          </p>
+        <div className="flex items-center gap-4">
+            <SidebarTrigger className="md:hidden" />
+            <div>
+                <h1 className="text-2xl font-bold font-headline">Shared with Me</h1>
+                <p className="text-muted-foreground">
+                    {loadingNotes ? 'Loading notes...' : `You have ${sharedNotes.length} notes shared with you.`}
+                </p>
+            </div>
         </div>
       </header>
       <main className="p-4 md:p-8">

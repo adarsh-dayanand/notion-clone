@@ -5,12 +5,16 @@ import { useState, type KeyboardEvent, useEffect, useRef } from "react"
 import dynamic from "next/dynamic"
 import { X, Tag } from "lucide-react"
 import type { OutputData } from "@editorjs/editorjs"
+import { useAuthState } from "react-firebase-hooks/auth"
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import type { Note } from "@/lib/types"
 import { Skeleton } from "@/components/ui/skeleton"
+import { auth, db } from "@/lib/firebase"
+
 
 const Editor = dynamic(() => import("./editor"), {
   ssr: false,
@@ -57,6 +61,7 @@ function parseContent(content: string): OutputData {
 }
 
 export function NoteEditor({ note, onUpdate, onTagUpdate, readOnly = false }: NoteEditorProps) {
+  const [user] = useAuthState(auth);
   const [title, setTitle] = useState(note.title);
   const [tags, setTags] = useState(note.tags);
   const [tagInput, setTagInput] = useState("")
@@ -67,26 +72,21 @@ export function NoteEditor({ note, onUpdate, onTagUpdate, readOnly = false }: No
   
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Effect to sync local state with changes from the server (e.g., from other collaborators)
   useEffect(() => {
     let hasSynced = false;
-    // Sync title
     if (note.title !== title) {
       setTitle(note.title);
       hasSynced = true;
     }
-    // Sync tags
     if (JSON.stringify(note.tags) !== JSON.stringify(tags)) {
       setTags(note.tags);
       hasSynced = true;
     }
 
-    // Sync content
     try {
       const localContentString = JSON.stringify(editorData);
       if (note.content && note.content !== localContentString) {
         setEditorData(parseContent(note.content));
-        // Force a re-mount of the editor component to correctly load the new data
         setEditorKey(`${note.id}-${new Date().getTime()}`);
         hasSynced = true;
       }
@@ -101,9 +101,8 @@ export function NoteEditor({ note, onUpdate, onTagUpdate, readOnly = false }: No
       });
     }
 
-  }, [note]); // This effect depends on the `note` object from the server.
+  }, [note]);
 
-  // Debounced auto-save effect
   useEffect(() => {
     if (readOnly) return;
 
@@ -124,15 +123,35 @@ export function NoteEditor({ note, onUpdate, onTagUpdate, readOnly = false }: No
 
       if (Object.keys(updatedFields).length > 0) {
         onUpdate(updatedFields);
+
+        if (user && note.permissions) {
+          Object.keys(note.permissions).forEach(uid => {
+              if (uid !== user.uid) {
+                  addDoc(collection(db, 'notifications'), {
+                      recipientId: uid,
+                      senderId: user.uid,
+                      senderProfile: {
+                          displayName: user.displayName,
+                          photoURL: user.photoURL,
+                      },
+                      noteId: note.id,
+                      noteTitle: title,
+                      type: 'update',
+                      isRead: false,
+                      createdAt: serverTimestamp(),
+                  });
+              }
+          });
+        }
       }
-    }, 1500); // 1.5-second debounce
+    }, 1500);
 
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [title, editorData, note, onUpdate, readOnly]);
+  }, [title, editorData, note, onUpdate, readOnly, user]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(e.target.value);

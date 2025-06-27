@@ -31,3 +31,18 @@ export type UserProfile = {
   displayName: string | null;
   photoURL: string | null;
 };
+
+export type Notification = {
+    id: string;
+    recipientId: string;
+    senderId: string;
+    senderProfile: {
+      displayName: string | null;
+      photoURL: string | null;
+    };
+    noteId: string;
+    noteTitle: string;
+    type: 'share' | 'update';
+    isRead: boolean;
+    createdAt: Timestamp | FieldValue;
+}
