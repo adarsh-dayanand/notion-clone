@@ -25,6 +25,7 @@ const Editor = dynamic(() => import("./editor"), {
 interface NoteEditorProps {
     note: Note;
     onUpdate: (updatedFields: Partial<Note>) => void;
+    onTagUpdate: (update: { add?: string, remove?: string }) => void;
     readOnly?: boolean;
 }
 
@@ -55,7 +56,7 @@ function parseContent(content: string): OutputData {
   };
 }
 
-export function NoteEditor({ note, onUpdate, readOnly = false }: NoteEditorProps) {
+export function NoteEditor({ note, onUpdate, onTagUpdate, readOnly = false }: NoteEditorProps) {
   const [title, setTitle] = useState(note.title);
   const [tags, setTags] = useState(note.tags);
   const [tagInput, setTagInput] = useState("")
@@ -120,9 +121,6 @@ export function NoteEditor({ note, onUpdate, readOnly = false }: NoteEditorProps
       if (contentString !== note.content) {
         updatedFields.content = contentString;
       }
-      if (JSON.stringify(tags) !== JSON.stringify(note.tags)) {
-        updatedFields.tags = tags;
-      }
 
       if (Object.keys(updatedFields).length > 0) {
         onUpdate(updatedFields);
@@ -134,7 +132,7 @@ export function NoteEditor({ note, onUpdate, readOnly = false }: NoteEditorProps
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [title, editorData, tags, note, onUpdate, readOnly]);
+  }, [title, editorData, note, onUpdate, readOnly]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(e.target.value);
@@ -153,7 +151,7 @@ export function NoteEditor({ note, onUpdate, readOnly = false }: NoteEditorProps
       e.preventDefault()
       const newTag = tagInput.trim();
       if (!tags.includes(newTag)) {
-        setTags([...tags, newTag]);
+        onTagUpdate({ add: newTag });
         setTagInput("")
         toast({
           title: "Tag added",
@@ -162,15 +160,14 @@ export function NoteEditor({ note, onUpdate, readOnly = false }: NoteEditorProps
       }
     }
     if (e.key === "Backspace" && tagInput === "" && tags.length > 0) {
-      const newTags = tags.slice(0, -1)
-      setTags(newTags);
+      const tagToRemove = tags[tags.length - 1];
+      onTagUpdate({ remove: tagToRemove });
     }
   }
 
   const removeTag = (tagToRemove: string) => {
     if (readOnly) return;
-    const newTags = tags.filter((tag) => tag !== tagToRemove);
-    setTags(newTags);
+    onTagUpdate({ remove: tagToRemove });
   }
   
   return (

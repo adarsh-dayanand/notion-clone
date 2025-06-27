@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { doc, getDoc, updateDoc, deleteDoc, serverTimestamp, collection, addDoc } from "firebase/firestore"
+import { doc, getDoc, updateDoc, deleteDoc, serverTimestamp, collection, addDoc, arrayUnion, arrayRemove, type FieldValue } from "firebase/firestore"
 import { useDocument } from "react-firebase-hooks/firestore"
 import { useAuthState } from 'react-firebase-hooks/auth'
 import { Bell, Trash, Loader2, ShieldOff, BrainCircuit, History } from "lucide-react"
@@ -116,6 +116,21 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
         toast({ title: "Error saving note", description: error.message, variant: "destructive" });
     } finally {
         setIsSaving(false);
+    }
+  };
+  
+  const handleTagUpdate = async ({ add, remove }: { add?: string, remove?: string }) => {
+    if (!noteRef || !note || permission === 'viewer') return;
+
+    try {
+        const update: { tags: FieldValue; updatedAt: FieldValue } = {
+            tags: add ? arrayUnion(add) : arrayRemove(remove!),
+            updatedAt: serverTimestamp(),
+        };
+        await updateDoc(noteRef, update as any);
+    } catch (error: any) {
+        console.error("Tag update failed:", error);
+        toast({ title: "Error updating tags", description: error.message, variant: "destructive" });
     }
   };
 
@@ -339,6 +354,7 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
             key={note.id} 
             note={noteForEditor}
             onUpdate={handleUpdateNote}
+            onTagUpdate={handleTagUpdate}
             readOnly={isReadOnly}
           />
         ) : (
