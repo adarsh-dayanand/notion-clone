@@ -15,6 +15,7 @@ import type { Note } from '@/lib/types';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { HeaderActions } from '@/components/header-actions';
 
 export default function HomePage() {
   const [user, loadingAuth] = useAuthState(auth);
@@ -104,10 +105,13 @@ export default function HomePage() {
                 <p className="text-muted-foreground">You have {notes.length} notes.</p>
             </div>
         </div>
-        <Button onClick={handleNewNote}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Create Note
-        </Button>
+        <div className="flex items-center gap-2 sm:gap-4">
+            <Button onClick={handleNewNote}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Create Note
+            </Button>
+            <HeaderActions />
+        </div>
       </header>
       <main className="p-4 md:p-8">
         {notes.length > 0 ? (

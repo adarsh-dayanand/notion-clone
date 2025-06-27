@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { SettingsNav } from "@/components/settings-nav"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { ReceiptText, Zap } from "lucide-react"
+import { HeaderActions } from "@/components/header-actions"
 
 export default function BillingPage() {
     const invoices = [
@@ -17,12 +18,15 @@ export default function BillingPage() {
     
     return (
         <div className="p-4 md:p-8 space-y-8 max-w-4xl mx-auto">
-            <header className="flex items-start gap-4">
-                <SidebarTrigger className="md:hidden mt-1.5" />
-                <div>
-                    <h1 className="text-3xl font-bold font-headline">Billing</h1>
-                    <p className="text-muted-foreground">Manage your subscription and billing details.</p>
+            <header className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-4">
+                    <SidebarTrigger className="md:hidden mt-1.5" />
+                    <div>
+                        <h1 className="text-3xl font-bold font-headline">Billing</h1>
+                        <p className="text-muted-foreground">Manage your subscription and billing details.</p>
+                    </div>
                 </div>
+                <HeaderActions />
             </header>
 
             <SettingsNav />

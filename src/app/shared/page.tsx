@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Note, UserProfile, NotePermission } from "@/lib/types";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { HeaderActions } from "@/components/header-actions";
 
 interface SharedNote extends Note {
   ownerProfile?: UserProfile;
@@ -108,6 +109,7 @@ export default function SharedPage() {
                 </p>
             </div>
         </div>
+        <HeaderActions />
       </header>
       <main className="p-4 md:p-8">
         {sharedNotes.length > 0 ? (

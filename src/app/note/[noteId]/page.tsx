@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { UserNav } from "@/components/user-nav"
+import { HeaderActions } from "@/components/header-actions"
 import { NoteEditor } from "@/components/note-editor"
 import { ShareDialog } from "@/components/share-dialog"
 import { ManagePrivacyDialog } from "@/components/manage-privacy-dialog"
@@ -404,7 +404,7 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
                 </div>
               </PopoverContent>
           </Popover>
-          <UserNav />
+          <HeaderActions />
         </div>
       </header>
       <main className="p-4 md:p-8">

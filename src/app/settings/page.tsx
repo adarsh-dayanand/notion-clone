@@ -20,6 +20,7 @@ import { Loader2 } from 'lucide-react';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SettingsNav } from '@/components/settings-nav';
+import { HeaderActions } from '@/components/header-actions';
 
 export default function SettingsPage() {
     const [user, loading] = useAuthState(auth);
@@ -189,12 +190,15 @@ export default function SettingsPage() {
 
     return (
         <div className="p-4 md:p-8 space-y-8 max-w-4xl mx-auto">
-            <header className="flex items-start gap-4">
-                <SidebarTrigger className="md:hidden mt-1.5" />
-                <div>
-                    <h1 className="text-3xl font-bold font-headline">Settings</h1>
-                    <p className="text-muted-foreground">Manage your account and profile settings.</p>
+            <header className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-4">
+                    <SidebarTrigger className="md:hidden mt-1.5" />
+                    <div>
+                        <h1 className="text-3xl font-bold font-headline">Settings</h1>
+                        <p className="text-muted-foreground">Manage your account and profile settings.</p>
+                    </div>
                 </div>
+                <HeaderActions />
             </header>
 
             <SettingsNav />
