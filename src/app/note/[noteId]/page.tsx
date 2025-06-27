@@ -74,6 +74,36 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
     }
   }, [noteSnapshot, user, loadingNote]);
 
+  const sendUpdateNotification = async (noteTitle: string) => {
+    if (!user || !note || !note.permissions) return;
+
+    const batch = writeBatch(db);
+    Object.keys(note.permissions)
+      .filter(uid => uid !== user.uid)
+      .forEach(uid => {
+        const notificationRef = doc(collection(db, 'notifications'));
+        batch.set(notificationRef, {
+            recipientId: uid,
+            senderId: user.uid,
+            senderProfile: {
+                displayName: user.displayName,
+                photoURL: user.photoURL,
+            },
+            noteId: note.id,
+            noteTitle: noteTitle,
+            type: 'update',
+            isRead: false,
+            createdAt: serverTimestamp(),
+        });
+      });
+      
+    try {
+        await batch.commit();
+    } catch(error) {
+        console.error("Failed to send update notifications", error);
+    }
+  };
+
 
   const handleUpdateNote = async (updatedFields: Partial<NoteType>) => {
     if (!noteRef || !note || !user || permission === 'viewer') return;
@@ -106,6 +136,9 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
             ...finalUpdates,
             updatedAt: serverTimestamp(),
         });
+        
+        await sendUpdateNotification(updatedFields.title || note.title);
+
     } catch (error: any) {
         console.error("Save failed:", error);
         toast({ title: "Error saving note", description: error.message, variant: "destructive" });
@@ -123,6 +156,7 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
             updatedAt: serverTimestamp(),
         };
         await updateDoc(noteRef, update as any);
+        await sendUpdateNotification(note.title);
     } catch (error: any) {
         console.error("Tag update failed:", error);
         toast({ title: "Error updating tags", description: error.message, variant: "destructive" });

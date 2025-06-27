@@ -6,7 +6,6 @@ import dynamic from "next/dynamic"
 import { X, Tag } from "lucide-react"
 import type { OutputData } from "@editorjs/editorjs"
 import { useAuthState } from "react-firebase-hooks/auth"
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -123,26 +122,6 @@ export function NoteEditor({ note, onUpdate, onTagUpdate, readOnly = false }: No
 
       if (Object.keys(updatedFields).length > 0) {
         onUpdate(updatedFields);
-
-        if (user && note.permissions) {
-          Object.keys(note.permissions).forEach(uid => {
-              if (uid !== user.uid) {
-                  addDoc(collection(db, 'notifications'), {
-                      recipientId: uid,
-                      senderId: user.uid,
-                      senderProfile: {
-                          displayName: user.displayName,
-                          photoURL: user.photoURL,
-                      },
-                      noteId: note.id,
-                      noteTitle: title,
-                      type: 'update',
-                      isRead: false,
-                      createdAt: serverTimestamp(),
-                  });
-              }
-          });
-        }
       }
     }, 6000);
 
@@ -151,7 +130,7 @@ export function NoteEditor({ note, onUpdate, onTagUpdate, readOnly = false }: No
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [title, editorData, note, onUpdate, readOnly, user]);
+  }, [title, editorData, note, onUpdate, readOnly]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(e.target.value);
