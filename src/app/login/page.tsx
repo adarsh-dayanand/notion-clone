@@ -8,9 +8,10 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
 } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 import { useAuthState } from 'react-firebase-hooks/auth';
 
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { GoogleIcon } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
@@ -32,10 +33,19 @@ export default function LoginPage() {
     const provider = new GoogleAuthProvider();
     setIsSigningIn(true);
     try {
-      // signInWithPopup will trigger the onAuthStateChanged listener,
-      // which is handled by the useAuthState hook. The useEffect above will
-      // then redirect the user to the main page.
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      if (user) {
+        // Add/update user in 'users' collection
+        await setDoc(doc(db, "users", user.uid), {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+        }, { merge: true });
+      }
+
     } catch (error: any) {
       console.error("Authentication error:", error);
       toast({

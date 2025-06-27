@@ -25,9 +25,10 @@ const Editor = dynamic(() => import("./editor"), {
 interface NoteEditorProps {
     note: Note;
     onUpdate: (updatedFields: Partial<Note>) => void;
+    readOnly?: boolean;
 }
 
-export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
+export function NoteEditor({ note, onUpdate, readOnly = false }: NoteEditorProps) {
   const [title, setTitle] = useState(note.title);
   const [tags, setTags] = useState(note.tags);
   const [content, setContent] = useState<OutputData | undefined>(() => {
@@ -64,6 +65,8 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
 
   // Debounced auto-save effect
   useEffect(() => {
+    if (readOnly) return;
+
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
@@ -92,7 +95,7 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [title, content, tags, note, onUpdate]);
+  }, [title, content, tags, note, onUpdate, readOnly]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(e.target.value);
@@ -126,6 +129,7 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
   }
 
   const removeTag = (tagToRemove: string) => {
+    if (readOnly) return;
     const newTags = tags.filter((tag) => tag !== tagToRemove);
     setTags(newTags);
   }
@@ -138,6 +142,7 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
           onChange={handleTitleChange}
           placeholder="Note title..."
           className="text-3xl md:text-4xl font-bold font-headline h-auto border-none focus-visible:ring-0 shadow-none p-0"
+          disabled={readOnly}
         />
       </div>
 
@@ -147,7 +152,11 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
           {tags.map((tag) => (
             <Badge key={tag} variant="secondary" className="text-sm">
               {tag}
-              <button onClick={() => removeTag(tag)} className="ml-1.5 rounded-full hover:bg-muted-foreground/20 p-0.5">
+              <button 
+                onClick={() => removeTag(tag)} 
+                className="ml-1.5 rounded-full hover:bg-muted-foreground/20 p-0.5 disabled:cursor-not-allowed"
+                disabled={readOnly}
+              >
                 <X className="h-3 w-3" />
               </button>
             </Badge>
@@ -158,6 +167,7 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
             onKeyDown={handleTagInputKeyDown}
             placeholder="Add a tag..."
             className="h-7 w-28 border-none focus-visible:ring-0 shadow-none p-0 bg-transparent"
+            disabled={readOnly}
           />
         </div>
       </div>
@@ -166,6 +176,7 @@ export function NoteEditor({ note, onUpdate }: NoteEditorProps) {
         holder={`editor-instance-${note.id}`}
         onChange={handleContentChange}
         data={content}
+        readOnly={readOnly}
       />
     </div>
   )

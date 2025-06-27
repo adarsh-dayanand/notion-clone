@@ -61,6 +61,9 @@ export default function HomeLayout({
       tags: [],
       isPrivate: false,
       ownerId: user.uid,
+      permissions: {
+        [user.uid]: 'owner',
+      },
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });

@@ -35,6 +35,9 @@ export default function HomePage() {
       tags: [],
       isPrivate: false,
       ownerId: user.uid,
+      permissions: {
+        [user.uid]: 'owner',
+      },
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -92,7 +95,9 @@ export default function HomePage() {
                       <span className="truncate">{note.title}</span>
                     </CardTitle>
                     <CardDescription>
-                      {note.updatedAt && `Updated ${format(note.updatedAt.toDate(), 'PPp')}`}
+                      {note.updatedAt && typeof (note.updatedAt as any).toDate === 'function' 
+                        ? `Updated ${format((note.updatedAt as any).toDate(), 'PPp')}`
+                        : 'Updated recently'}
                     </CardDescription>
                   </CardHeader>
                   <CardFooter>

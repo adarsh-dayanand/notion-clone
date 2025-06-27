@@ -18,6 +18,7 @@ interface EditorProps {
   data?: OutputData;
   onChange(data: OutputData): void;
   holder: string;
+  readOnly?: boolean;
 }
 
 const EDITOR_TOOLS: EditorConfig['tools'] = {
@@ -35,7 +36,7 @@ const EDITOR_TOOLS: EditorConfig['tools'] = {
   table: Table,
 };
 
-const Editor = ({ data, onChange, holder }: EditorProps) => {
+const Editor = ({ data, onChange, holder, readOnly = false }: EditorProps) => {
   const ref = useRef<EditorJS>();
 
   useEffect(() => {
@@ -44,12 +45,16 @@ const Editor = ({ data, onChange, holder }: EditorProps) => {
         holder: holder,
         tools: EDITOR_TOOLS,
         data,
+        readOnly: readOnly,
         async onChange(api) {
-          const savedData = await api.saver.save();
-          onChange(savedData);
+          const isReadOnly = await api.readOnly.isEnabled;
+          if (!isReadOnly) {
+            const savedData = await api.saver.save();
+            onChange(savedData);
+          }
         },
         autofocus: true,
-        placeholder: "Let's write an awesome story!",
+        placeholder: readOnly ? "This note is read-only." : "Let's write an awesome story!",
       });
       ref.current = editor;
     }
@@ -57,9 +62,11 @@ const Editor = ({ data, onChange, holder }: EditorProps) => {
     return () => {
       if (ref.current && ref.current.destroy) {
         ref.current.destroy();
+        ref.current = undefined;
       }
     };
     // We only want to initialize the editor once.
+    // The key on the parent component handles re-initialization on note change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

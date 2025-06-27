@@ -63,6 +63,9 @@ export default function SettingsLayout({
       tags: [],
       isPrivate: false,
       ownerId: user.uid,
+      permissions: {
+        [user.uid]: 'owner',
+      },
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });

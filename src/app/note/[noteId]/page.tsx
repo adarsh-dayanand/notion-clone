@@ -3,7 +3,8 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { doc, getDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore"
 import { useDocument } from "react-firebase-hooks/firestore"
-import { Bell, Trash } from "lucide-react"
+import { useAuthState } from 'react-firebase-hooks/auth'
+import { Bell, Trash, Loader2, ShieldOff, BrainCircuit } from "lucide-react"
 
 import {
   AlertDialog,
@@ -25,9 +26,9 @@ import { Button, buttonVariants } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
-import { db } from "@/lib/firebase"
+import { auth, db } from "@/lib/firebase"
 import { encrypt, decrypt } from "@/lib/crypto"
-import type { Note as NoteType } from "@/lib/types"
+import type { Note as NoteType, NotePermission } from "@/lib/types"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export default function NotePage({ params }: { params: { noteId: string } }) {
@@ -35,26 +36,43 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
   const router = useRouter();
   const { toast } = useToast();
 
+  const [user, loadingAuth] = useAuthState(auth);
   const noteRef = noteId ? doc(db, "notes", noteId) : null;
   const [noteSnapshot, loadingNote] = useDocument(noteRef);
 
   const [note, setNote] = useState<NoteType | null>(null);
   const [decryptedContent, setDecryptedContent] = useState<string | null>(null);
-  
+  const [permission, setPermission] = useState<NotePermission | null>(null);
+
   useEffect(() => {
-    if (noteSnapshot?.exists()) {
+    if (noteSnapshot?.exists() && user) {
       const data = { id: noteSnapshot.id, ...noteSnapshot.data() } as NoteType;
+      
+      const userPermission = data.permissions?.[user.uid] || null;
+      setPermission(userPermission);
+      
+      if (!userPermission) {
+        setNote(null);
+        return;
+      }
+      
       setNote(data);
       if (!data.isPrivate) {
         setDecryptedContent(data.content);
       } else {
-        setDecryptedContent(null); 
+        // Reset decrypted content if note is private and not yet unlocked
+        // or if the user changes.
+        setDecryptedContent(null);
       }
+    } else if (!loadingNote) {
+        // If note doesn't exist after loading, clear it
+        setNote(null);
     }
-  }, [noteSnapshot]);
+  }, [noteSnapshot, user, loadingNote]);
+
 
   const handleUpdateNote = async (updatedFields: Partial<NoteType>) => {
-    if (!noteRef) return;
+    if (!noteRef || permission === 'viewer') return;
     await updateDoc(noteRef, {
       ...updatedFields,
       updatedAt: serverTimestamp(),
@@ -62,7 +80,7 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
   };
 
   const handleSetPassword = async (password: string) => {
-    if (!note || !noteRef) return;
+    if (!note || !noteRef || permission !== 'owner') return;
     try {
       const contentToEncrypt = decryptedContent || note.content;
       const encryptedContent = encrypt(contentToEncrypt, password);
@@ -80,8 +98,8 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
   };
   
   const handleRemovePassword = async () => {
-    if (!note || !noteRef || !decryptedContent) {
-      toast({ title: "Unlock note first", description: "You must unlock the note before removing the password.", variant: "destructive" });
+    if (!note || !noteRef || !decryptedContent || permission !== 'owner') {
+      toast({ title: "Action not allowed", description: "You must be the owner and unlock the note to remove the password.", variant: "destructive" });
       return;
     }
     await updateDoc(noteRef, {
@@ -103,33 +121,48 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
   };
 
   const handleDeleteNote = async () => {
-    if (!noteRef) return;
-    router.replace('/'); 
+    if (!noteRef || permission !== 'owner') return;
+    router.replace('/home'); 
     await deleteDoc(noteRef);
     toast({ title: "Note deleted" });
   };
   
-  const isNoteUnlocked = note && (!note.isPrivate || !!decryptedContent);
-  const noteForEditor = note && decryptedContent ? { ...note, content: decryptedContent } : null;
-
-  if (loadingNote) {
+  if (loadingAuth || loadingNote) {
      return (
-        <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-8">
-            <Skeleton className="h-12 w-3/4" />
-            <div className="flex gap-2">
-                <Skeleton className="h-6 w-20" />
-                <Skeleton className="h-6 w-20" />
-            </div>
-            <Skeleton className="h-64 w-full" />
+        <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-background">
+          <BrainCircuit className="h-12 w-12 animate-pulse text-primary" />
+          <p className="text-muted-foreground">Loading Note...</p>
         </div>
      )
   }
 
-  if (!note && !loadingNote) {
-     return <div className="p-4 md:p-8">Note not found or you do not have permission to view it.</div>;
+  if (!user) {
+    router.replace('/login');
+    return null;
   }
   
-  if (!note) return null;
+  if (!noteSnapshot?.exists()) {
+    return <div className="p-4 md:p-8 text-center">Note not found.</div>;
+  }
+  
+  if (!permission) {
+     return (
+        <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-4 text-center">
+            <ShieldOff className="h-16 w-16 text-destructive" />
+            <h1 className="text-2xl font-bold">Access Denied</h1>
+            <p className="text-muted-foreground">You do not have permission to view this note.</p>
+            <Button asChild>
+                <a href="/home">Go to Home</a>
+            </Button>
+        </div>
+     )
+  }
+
+  if (!note) return null; // Should not happen if permission exists, but for type safety
+
+  const isNoteUnlocked = !note.isPrivate || !!decryptedContent;
+  const isReadOnly = permission === 'viewer';
+  const noteForEditor = isNoteUnlocked && decryptedContent ? { ...note, content: decryptedContent } : null;
 
   return (
     <>
@@ -137,38 +170,42 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
         <div>
           <p className="text-sm text-muted-foreground truncate">Notes / {note.title}</p>
         </div>
-        <div className="flex items-center gap-4">
-          <ManagePrivacyDialog
-            note={note}
-            isUnlocked={isNoteUnlocked}
-            onSetPassword={handleSetPassword}
-            onRemovePassword={handleRemovePassword}
-          />
-          <ShareDialog />
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" size="icon">
-                <Trash className="h-4 w-4 text-destructive" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete your note.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  className={buttonVariants({ variant: "destructive" })}
-                  onClick={handleDeleteNote}
-                >
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+        <div className="flex items-center gap-2 sm:gap-4">
+          {permission === 'owner' && (
+            <>
+              <ManagePrivacyDialog
+                note={note}
+                isUnlocked={isNoteUnlocked}
+                onSetPassword={handleSetPassword}
+                onRemovePassword={handleRemovePassword}
+              />
+              <ShareDialog note={note} currentUser={user} />
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <Trash className="h-4 w-4 text-destructive" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete your note.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      className={buttonVariants({ variant: "destructive" })}
+                      onClick={handleDeleteNote}
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
+          )}
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" size="icon" className="relative">
@@ -219,6 +256,7 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
             key={note.id} 
             note={noteForEditor}
             onUpdate={handleUpdateNote}
+            readOnly={isReadOnly}
           />
         ) : (
           <UnlockPrompt onUnlock={handleUnlockNote} />
