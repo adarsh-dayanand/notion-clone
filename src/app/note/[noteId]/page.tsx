@@ -1,3 +1,4 @@
+
 "use client"
 import { useEffect, useState, useMemo } from "react"
 import Link from "next/link"
@@ -33,6 +34,7 @@ import { auth, db } from "@/lib/firebase"
 import { encrypt, decrypt } from "@/lib/crypto"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import type { Note as NoteType, NotePermission, NoteVersion, Notification } from "@/lib/types"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function NotePage({ params }: { params: { noteId: string } }) {
   const { noteId } = params;
@@ -240,9 +242,34 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
 
   if (loadingAuth || loadingNote) {
      return (
-        <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-background">
-          <BrainCircuit className="h-12 w-12 animate-pulse text-primary" />
-          <p className="text-muted-foreground">Loading Note...</p>
+        <div className="h-full w-full">
+            <header className="flex items-center justify-between p-4 border-b">
+                <div className="flex items-center gap-2 md:gap-4">
+                    <Skeleton className="block md:hidden h-9 w-9" />
+                    <Skeleton className="h-5 w-48" />
+                </div>
+                <div className="flex items-center gap-2 sm:gap-4">
+                    <Skeleton className="h-10 w-24" />
+                    <Skeleton className="h-10 w-32" />
+                    <Skeleton className="h-10 w-10 rounded-md" />
+                    <Skeleton className="h-10 w-10 rounded-md" />
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                </div>
+            </header>
+            <main className="p-4 md:p-8 max-w-4xl mx-auto">
+                <Skeleton className="h-12 w-3/4 mb-6" />
+                <div className="flex items-center gap-2 mb-6">
+                    <Skeleton className="h-5 w-5" />
+                    <Skeleton className="h-6 w-20" />
+                    <Skeleton className="h-6 w-24" />
+                </div>
+                <div className="space-y-4 prose prose-stone dark:prose-invert max-w-none">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-5/6" />
+                    <Skeleton className="h-4 w-3/4" />
+                </div>
+            </main>
         </div>
      )
   }

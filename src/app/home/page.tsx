@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, FileText, Lock, Loader2 } from 'lucide-react';
+import { PlusCircle, FileText, Lock } from 'lucide-react';
 import type { Note } from '@/lib/types';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -57,11 +57,35 @@ export default function HomePage() {
     router.push(`/note/${newDoc.id}`);
   };
 
-  if (loadingAuth) {
+  if (loadingAuth || loadingNotes) {
     return (
-      <div className="flex h-full w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
+      <>
+        <header className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center gap-4">
+                <Skeleton className="block md:hidden h-9 w-9" />
+                <div>
+                    <Skeleton className="h-7 w-32 mb-2" />
+                    <Skeleton className="h-4 w-24" />
+                </div>
+            </div>
+            <Skeleton className="h-10 w-32" />
+        </header>
+        <main className="p-4 md:p-8">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {[...Array(6)].map((_, i) => (
+                    <Card key={i}>
+                        <CardHeader>
+                            <Skeleton className="h-6 w-3/4 mb-2" />
+                            <Skeleton className="h-4 w-1/2" />
+                        </CardHeader>
+                        <CardFooter>
+                            <Skeleton className="h-4 w-1/4" />
+                        </CardFooter>
+                    </Card>
+                ))}
+            </div>
+        </main>
+      </>
     );
   }
   
@@ -86,21 +110,7 @@ export default function HomePage() {
         </Button>
       </header>
       <main className="p-4 md:p-8">
-        {loadingNotes ? (
-           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-             {[...Array(3)].map((_, i) => (
-                <Card key={i}>
-                    <CardHeader>
-                        <Skeleton className="h-6 w-3/4 mb-2" />
-                        <Skeleton className="h-4 w-1/2" />
-                    </CardHeader>
-                    <CardFooter>
-                        <Skeleton className="h-4 w-1/4" />
-                    </CardFooter>
-                </Card>
-            ))}
-           </div>
-        ) : notes.length > 0 ? (
+        {notes.length > 0 ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {notes.map(note => (
               <Link href={`/note/${note.id}`} key={note.id}>

@@ -75,8 +75,25 @@ export default function SharedPage() {
     fetchNotesAndOwners();
   }, [notesSnapshot, loadingSnapshot, user]);
 
-  if (loadingAuth) {
-    return <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  if (loadingAuth || loadingNotes) {
+    return (
+        <>
+            <header className="flex items-center justify-between p-4 border-b">
+                <div className="flex items-center gap-4">
+                    <Skeleton className="block md:hidden h-9 w-9" />
+                    <div>
+                        <Skeleton className="h-7 w-48 mb-2" />
+                        <Skeleton className="h-4 w-40" />
+                    </div>
+                </div>
+            </header>
+            <main className="p-4 md:p-8">
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {[...Array(6)].map((_, i) => <NoteCardSkeleton key={i} />)}
+                </div>
+            </main>
+        </>
+    );
   }
 
   return (
@@ -87,17 +104,13 @@ export default function SharedPage() {
             <div>
                 <h1 className="text-2xl font-bold font-headline">Shared with Me</h1>
                 <p className="text-muted-foreground">
-                    {loadingNotes ? 'Loading notes...' : `You have ${sharedNotes.length} notes shared with you.`}
+                    {`You have ${sharedNotes.length} notes shared with you.`}
                 </p>
             </div>
         </div>
       </header>
       <main className="p-4 md:p-8">
-        {loadingNotes ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {[...Array(3)].map((_, i) => <NoteCardSkeleton key={i} />)}
-            </div>
-        ) : sharedNotes.length > 0 ? (
+        {sharedNotes.length > 0 ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {sharedNotes.map((note) => (
               <Link href={`/note/${note.id}`} key={note.id}>

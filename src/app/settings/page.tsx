@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Loader2 } from 'lucide-react';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function SettingsPage() {
     const [user, loading] = useAuthState(auth);
@@ -40,7 +41,61 @@ export default function SettingsPage() {
     }, [user]);
     
     if (loading) {
-        return <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+        return (
+            <div className="p-4 md:p-8 space-y-8 max-w-4xl mx-auto">
+                <header className="flex items-start gap-4">
+                    <Skeleton className="block md:hidden h-9 w-9 mt-1.5" />
+                    <div>
+                        <Skeleton className="h-9 w-32 mb-2" />
+                        <Skeleton className="h-4 w-56" />
+                    </div>
+                </header>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle><Skeleton className="h-6 w-24" /></CardTitle>
+                        <CardDescription><Skeleton className="h-4 w-48" /></CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex items-center space-x-4">
+                            <Skeleton className="h-20 w-20 rounded-full" />
+                            <Skeleton className="h-10 w-32" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label><Skeleton className="h-4 w-24 mb-2" /></Label>
+                            <Skeleton className="h-10 w-full" />
+                        </div>
+                    </CardContent>
+                    <CardFooter>
+                        <Skeleton className="h-10 w-28" />
+                    </CardFooter>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle><Skeleton className="h-6 w-36" /></CardTitle>
+                        <CardDescription><Skeleton className="h-4 w-40" /></CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        <Label><Skeleton className="h-4 w-16 mb-2" /></Label>
+                        <Skeleton className="h-10 w-full" />
+                    </CardContent>
+                    <CardFooter>
+                        <Skeleton className="h-10 w-32" />
+                    </CardFooter>
+                </Card>
+                
+                <Card className="border-destructive">
+                    <CardHeader>
+                        <CardTitle><Skeleton className="h-6 w-40" /></CardTitle>
+                        <CardDescription><Skeleton className="h-4 w-64" /></CardDescription>
+                    </CardHeader>
+                    <CardFooter>
+                        <Skeleton className="h-10 w-36" />
+                    </CardFooter>
+                </Card>
+            </div>
+        );
     }
 
     if (!user) {
