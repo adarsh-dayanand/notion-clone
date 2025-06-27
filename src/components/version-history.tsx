@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from 'react';
@@ -5,10 +6,12 @@ import { useCollection } from 'react-firebase-hooks/firestore';
 import { collection, query, orderBy, doc, getDoc, type Timestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { History, Loader2, Eye, Undo, GitCommitHorizontal } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import type { OutputData } from '@editorjs/editorjs';
 
 import { db } from '@/lib/firebase';
 import type { NoteVersion, UserProfile } from '@/lib/types';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
@@ -33,7 +36,12 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from './ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
+
+const EditorPreview = dynamic(() => import('@/components/editor'), {
+  ssr: false,
+  loading: () => <div className="flex justify-center items-center h-full p-4"><Loader2 className="h-6 w-6 animate-spin" /></div>
+});
+
 
 interface VersionHistoryProps {
   noteId: string;
@@ -58,11 +66,10 @@ const VersionItemSkeleton = () => (
 );
 
 export function VersionHistory({ noteId, onRestore, disabled = false }: VersionHistoryProps) {
-  const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const versionsRef = collection(db, 'notes', noteId, 'versions');
   const versionsQuery = query(versionsRef, orderBy('savedAt', 'desc'));
-  const [versionsSnapshot, loading, error] = useCollection(versionsQuery);
+  const [versionsSnapshot, loading] = useCollection(versionsQuery);
 
   const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
   const [loadingProfiles, setLoadingProfiles] = useState(false);
@@ -93,7 +100,7 @@ export function VersionHistory({ noteId, onRestore, disabled = false }: VersionH
       };
       fetchProfiles();
     }
-  }, [versions]);
+  }, [versions, userProfiles]);
 
   const handleRestoreClick = (version: NoteVersion) => {
     onRestore(version);
@@ -117,7 +124,7 @@ export function VersionHistory({ noteId, onRestore, disabled = false }: VersionH
         </SheetHeader>
         <ScrollArea className="flex-grow my-4">
           <div className="space-y-2 pr-4">
-            {loading ? (
+            {loading || loadingProfiles ? (
                 <>
                     <VersionItemSkeleton />
                     <VersionItemSkeleton />
@@ -156,8 +163,13 @@ export function VersionHistory({ noteId, onRestore, disabled = false }: VersionH
                                     Read-only preview of version from {savedAtDate ? format(savedAtDate, 'PPp') : ''}.
                                   </AlertDialogDescription>
                               </AlertDialogHeader>
-                              <ScrollArea className="h-72 w-full rounded-md border p-4">
-                                  <pre className="text-xs whitespace-pre-wrap break-all">{JSON.stringify(JSON.parse(version.content), null, 2)}</pre>
+                              <ScrollArea className="h-72 w-full rounded-md border">
+                                  <EditorPreview
+                                      holder={`version-preview-${version.id}`}
+                                      data={JSON.parse(version.content) as OutputData}
+                                      onChange={() => {}}
+                                      readOnly={true}
+                                  />
                               </ScrollArea>
                               <AlertDialogFooter>
                                   <AlertDialogCancel>Close</AlertDialogCancel>
@@ -198,7 +210,6 @@ export function VersionHistory({ noteId, onRestore, disabled = false }: VersionH
                     </p>
                 </div>
             )}
-            {error && <p className="text-destructive text-sm p-2">Error loading versions: {error.message}</p>}
           </div>
         </ScrollArea>
         <SheetFooter>
