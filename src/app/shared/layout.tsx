@@ -1,6 +1,7 @@
 
 "use client"
 
+import * as React from "react"
 import { useParams, usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
 import {
@@ -13,7 +14,7 @@ import {
   Lock,
 } from "lucide-react"
 import { useCollection } from 'react-firebase-hooks/firestore';
-import { collection, query, where, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, addDoc, serverTimestamp, type Timestamp } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 
 import {
@@ -45,11 +46,21 @@ export default function SharedLayout({
   const router = useRouter();
   const [user] = useAuthState(auth);
 
-  const notesCollection = user ? collection(db, 'notes') : null;
-  const q = notesCollection ? query(notesCollection, where('ownerId', '==', user?.uid), orderBy('updatedAt', 'desc')) : null;
-  const [notesSnapshot, loadingNotes] = useCollection(q);
+  const [notesSnapshot, loadingNotes] = useCollection(
+    user ? query(collection(db, 'notes'), where('ownerId', '==', user.uid)) : null
+  );
 
-  const notes = notesSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Note)) || [];
+  const notes = React.useMemo(() => {
+    if (!notesSnapshot) return [];
+    const docs = notesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Note));
+    docs.sort((a, b) => {
+      const dateA = (a.updatedAt as Timestamp)?.toDate?.();
+      const dateB = (b.updatedAt as Timestamp)?.toDate?.();
+      if (!dateA || !dateB) return 0;
+      return dateB.getTime() - dateA.getTime();
+    });
+    return docs;
+  }, [notesSnapshot]);
 
   const handleNewNote = async () => {
     if (!user) return;
