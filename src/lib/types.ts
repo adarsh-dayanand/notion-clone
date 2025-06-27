@@ -17,6 +17,14 @@ export type Note = {
   };
 };
 
+export type NoteVersion = {
+  id: string;
+  title: string;
+  content: string; // Stored unencrypted
+  savedAt: Timestamp;
+  savedBy: string; // UID of user
+};
+
 export type UserProfile = {
   uid: string;
   email: string | null;

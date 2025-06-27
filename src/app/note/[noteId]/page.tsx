@@ -1,10 +1,11 @@
 "use client"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { doc, getDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore"
+import { doc, getDoc, updateDoc, deleteDoc, serverTimestamp, collection, addDoc } from "firebase/firestore"
 import { useDocument } from "react-firebase-hooks/firestore"
 import { useAuthState } from 'react-firebase-hooks/auth'
-import { Bell, Trash, Loader2, ShieldOff, BrainCircuit } from "lucide-react"
+import { Bell, Trash, Loader2, ShieldOff, BrainCircuit, History } from "lucide-react"
+import { format } from "date-fns"
 
 import {
   AlertDialog,
@@ -22,14 +23,14 @@ import { NoteEditor } from "@/components/note-editor"
 import { ShareDialog } from "@/components/share-dialog"
 import { ManagePrivacyDialog } from "@/components/manage-privacy-dialog"
 import { UnlockPrompt } from "@/components/unlock-prompt"
+import { VersionHistory } from "@/components/version-history"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
 import { auth, db } from "@/lib/firebase"
 import { encrypt, decrypt } from "@/lib/crypto"
-import type { Note as NoteType, NotePermission } from "@/lib/types"
-import { Skeleton } from "@/components/ui/skeleton"
+import type { Note as NoteType, NotePermission, NoteVersion } from "@/lib/types"
 
 export default function NotePage({ params }: { params: { noteId: string } }) {
   const { noteId } = params;
@@ -44,6 +45,7 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
   const [decryptedContent, setDecryptedContent] = useState<string | null>(null);
   const [permission, setPermission] = useState<NotePermission | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [sessionPassword, setSessionPassword] = useState<string | null>(null);
 
   useEffect(() => {
     if (noteSnapshot?.exists() && user) {
@@ -60,10 +62,12 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
       setNote(data);
       if (!data.isPrivate) {
         setDecryptedContent(data.content);
+        setSessionPassword(null);
       } else {
         // Reset decrypted content if note is private and not yet unlocked
-        // or if the user changes.
+        // or if the user changes. We also clear the session password.
         setDecryptedContent(null);
+        setSessionPassword(null);
       }
     } else if (!loadingNote) {
         // If note doesn't exist after loading, clear it
@@ -73,18 +77,45 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
 
 
   const handleUpdateNote = async (updatedFields: Partial<NoteType>) => {
-    if (!noteRef || permission === 'viewer') return;
+    if (!noteRef || !note || !user || permission === 'viewer') return;
+
+    // 1. Create a version if content has changed.
+    const oldContent = note.isPrivate ? decryptedContent : note.content;
+    if (updatedFields.content && oldContent && updatedFields.content !== oldContent) {
+        const versionsCol = collection(db, "notes", note.id, "versions");
+        await addDoc(versionsCol, {
+            title: note.title,
+            content: oldContent, // The content before the current update
+            savedAt: note.updatedAt,
+            savedBy: user.uid, // The user performing the update
+        });
+    }
+
     setIsSaving(true);
     try {
-      await updateDoc(noteRef, {
-        ...updatedFields,
-        updatedAt: serverTimestamp(),
-      });
+        let finalUpdates = { ...updatedFields };
+
+        // 2. Re-encrypt content if note is private.
+        if (finalUpdates.content && note.isPrivate) {
+            if (sessionPassword) {
+                finalUpdates.content = encrypt(finalUpdates.content, sessionPassword);
+            } else {
+                toast({ title: "Cannot save private note", description: "Session password not found. Please unlock the note again.", variant: "destructive" });
+                setIsSaving(false);
+                return;
+            }
+        }
+        
+        // 3. Update the note.
+        await updateDoc(noteRef, {
+            ...finalUpdates,
+            updatedAt: serverTimestamp(),
+        });
     } catch (error: any) {
-      console.error("Save failed:", error);
-      toast({ title: "Error saving note", description: error.message, variant: "destructive" });
+        console.error("Save failed:", error);
+        toast({ title: "Error saving note", description: error.message, variant: "destructive" });
     } finally {
-      setIsSaving(false);
+        setIsSaving(false);
     }
   };
 
@@ -100,6 +131,7 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
         updatedAt: serverTimestamp(),
       });
       setDecryptedContent(null);
+      setSessionPassword(password);
       toast({ title: "Note is now private", description: "The note has been secured with a password." });
     } catch (e) {
       toast({ title: "Encryption failed", description: "Could not secure the note.", variant: "destructive" });
@@ -115,6 +147,7 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
       isPrivate: false,
       updatedAt: serverTimestamp(),
     });
+    setSessionPassword(null);
     toast({ title: "Privacy removed", description: "The note is no longer password protected." });
   };
 
@@ -123,6 +156,7 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
     try {
       const content = decrypt(note.content, passwordAttempt);
       setDecryptedContent(content);
+      setSessionPassword(passwordAttempt);
       toast({ title: "Note unlocked" });
     } catch (error) {
       toast({ title: "Incorrect password", variant: "destructive" });
@@ -136,6 +170,39 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
     toast({ title: "Note deleted" });
   };
   
+  const handleRestoreVersion = async (version: NoteVersion) => {
+    if (!noteRef || !note || permission === 'viewer') {
+         toast({ title: "Permission Denied", description: "You do not have permission to restore versions.", variant: "destructive" });
+         return;
+    }
+
+    setIsSaving(true);
+    try {
+        let newContent = version.content;
+        // If the note is currently private, we need to encrypt the restored content.
+        if (note.isPrivate) {
+             if (sessionPassword) {
+                newContent = encrypt(newContent, sessionPassword);
+            } else {
+                toast({ title: "Cannot restore to private note", description: "Please unlock the note before restoring a version.", variant: "destructive" });
+                setIsSaving(false);
+                return;
+            }
+        }
+
+        await updateDoc(noteRef, {
+            title: version.title,
+            content: newContent,
+            updatedAt: serverTimestamp(),
+        });
+        toast({ title: "Note Restored", description: `Restored to version from ${format(version.savedAt.toDate(), 'PPp')}` });
+    } catch(error: any) {
+         toast({ title: "Failed to restore", description: error.message, variant: "destructive" });
+    } finally {
+        setIsSaving(false);
+    }
+  }
+
   if (loadingAuth || loadingNote) {
      return (
         <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-background">
@@ -186,6 +253,7 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
           )}
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
+          <VersionHistory noteId={note.id} onRestore={handleRestoreVersion} disabled={isReadOnly} />
           {permission === 'owner' && (
             <>
               <ManagePrivacyDialog
@@ -205,7 +273,7 @@ export default function NotePage({ params }: { params: { noteId: string } }) {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete your note.
+                      This action cannot be undone. This will permanently delete your note and its version history.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
